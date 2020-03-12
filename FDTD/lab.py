@@ -16,7 +16,7 @@ test[200:271] = f.NonDispersiveMedia(name='Media2Epsleft', permeability=1, permi
 test[35] = f.EnvelopeSinus(name='EnevelopedSinusMitte', wavelength=100e-09, phase_shift=0, amplitude=1, fwhm=500e-09, peak_timestep=200)
 #test[30] = f.GaussianImpulse(name='andererImpuls', amplitude=1.3, peak_timestep=60, fwhm= 120.e-09)
 
-test.animate_timesteps(1000)
+test.animate_timesteps(1200)
 
 #p = np.ones(3)
 
