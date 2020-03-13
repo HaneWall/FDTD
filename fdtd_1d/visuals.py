@@ -38,22 +38,24 @@ def visualize(Grid):
     plt.show()
 
 
-class AnimateTillTimestep:
+class AnimateTillTimestep(ani.TimedAnimation):
 
     def __init__(self, grid_obj, final_timestep):
         self.grid = grid_obj
-        self.fig_ani, self.axes_ani = plt.subplots(2, 1, dpi=100, figsize=(12,8))
+        fig_ani, self.axes_ani = plt.subplots(2, 1, dpi=100, figsize=(12, 8))
         self.final_timestep = final_timestep
-        self.animation = None
         self.grid.timesteps = self.final_timestep
+
         self.axes_ani[0].xaxis.grid(linestyle='dotted')
         self.axes_ani[0].set_xlabel('Cell')
         self.axes_ani[0].set_ylabel('E', fontsize=12, rotation=0)
         self.axes_ani[1].xaxis.grid(linestyle='dotted')
         self.axes_ani[1].set_xlabel('Cell')
         self.axes_ani[1].set_ylabel('B', fontsize=12, rotation=0)
-        self.line_0 = Line2D(np.arange(self.grid.nz), self.grid.E)
-        self.line_1 = Line2D(np.arange(self.grid.nz), self.grid.B)
+
+        self.line_0 = Line2D([], [])
+        self.line_1 = Line2D([], [])
+
         self.axes_ani[0].add_line(self.line_0)
         self.axes_ani[1].add_line(self.line_1)
         self.axes_ani[0].set_xlim([0, self.grid.nz -1])
@@ -78,18 +80,25 @@ class AnimateTillTimestep:
                                  alpha=0.3)
             self.axes_ani[0].add_patch(src_repr)
 
-    def step(self, i):
-        self.grid.timesteps_passed = i
+        ani.TimedAnimation.__init__(self, fig_ani, blit=True, interval=5, repeat=False)
+
+    def _draw_frame(self, framedata):
+        self.grid.timesteps_passed = framedata
         self.grid.update()
         self.axes_ani[0].set_title('time passed: {0:.3e}s,  timesteps passed: {timesteps}'.format(self.grid.time_passed,
                                                                                                   timesteps=self.grid.timesteps_passed))
         self.line_0.set_data(np.arange(self.grid.nz), self.grid.E)
         self.line_1.set_data(np.arange(self.grid.nz), self.grid.B)
 
-        return self.line_0, self.line_1
+        self._drawn_artists = [self.line_0, self.line_1]
+
+    def new_frame_seq(self):
+        return iter(range(self.final_timestep + 1))
+
+    def _init_draw(self):
+        lines = [self.line_0, self.line_1]
+        for l in lines:
+            l.set_data([], [])
 
     def create_animation(self):
-        # fps = 1000 / interval
-        self.animation = ani.FuncAnimation(self.fig_ani, func=self.step, frames=self.final_timestep + 1, blit=False, interval=100, repeat=False)
-        self.fig_ani.tight_layout()
         plt.show()

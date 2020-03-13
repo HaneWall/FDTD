@@ -17,7 +17,3 @@ test[35] = f.EnvelopeSinus(name='EnevelopedSinusMitte', wavelength=100e-09, phas
 #test[30] = f.GaussianImpulse(name='andererImpuls', amplitude=1.3, peak_timestep=60, fwhm= 120.e-09)
 
 test.animate_timesteps(1200)
-
-#p = np.ones(3)
-
-#print(p)
