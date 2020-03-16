@@ -64,16 +64,14 @@ class Grid:
         vid = AnimateTillTimestep(grid_obj=self, final_timestep=timesteps)
         vid.create_animation()
 
-    def cc_minus(self, cell):                      # conductivity coefficient for non dispersive media 1 - ..
-        coefficient_minus = (1 - (self.conductivity[cell] * self.dt) / (2 * eps0 * self.eps[cell]))
-        return coefficient_minus
+    def ca(self, cell):                            # Taflove convention
+        return (1 - (self.conductivity[cell] * self.dt) / (2 * eps0 * self.eps[cell]))/(1 + (self.conductivity[cell] * self.dt) / (2 * eps0 * self.eps[cell]))
 
-    def cc_plus(self, cell):
-        coefficient_plus = (1 + (self.conductivity[cell] * self.dt) / (2 * eps0 * self.eps[cell]))
-        return coefficient_plus
+    def cb(self, cell):                            # Taflove convention
+        return self.courant / (self.eps[cell] * (1 + (self.conductivity[cell] * self.dt) / (2 * eps0 * self.eps[cell])))
 
     def step_E(self, cell):
-        self.E[cell] = self.cc_minus(cell) / self.cc_plus(cell) * self.E[cell] - c0 * self.courant / (self.eps[cell] * self.cc_plus(cell)) * curl_B(self.B, cell)
+        self.E[cell] = self.ca(cell) * self.E[cell] - c0 * self.cb(cell) * curl_B(self.B, cell)
 
     def step_B(self, cell):
         self.B[cell] = self.B[cell] - self.courant / c0 * curl_E(self.E, cell)
