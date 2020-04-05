@@ -18,7 +18,7 @@ class Vacuum:
         self.position = None
         self.material_name = 'vacuum'
         self.conductivity = 0           # sigma
-        self.model = None               # goal: 'drude' -> Drude Material -> different step_E() function in grid.py or material.py activates
+        self.model = None               # TODO: 'drude' -> Drude Material -> different step_E() function in grid.py or material.py activates
 
     def _place_into_grid(self, grid, index):
         if isinstance(index, int):

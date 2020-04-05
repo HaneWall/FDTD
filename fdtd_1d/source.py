@@ -97,4 +97,30 @@ class EnvelopeSinus(ParentSource):
     # for soft source change '=' to '+=' and vice versa
     def step_E(self):
         self.grid.E[self.position] += self.ampl * np.exp(-0.5 * ((self.peak_timestep -
-                                                                  self.grid.timesteps_passed)/self.sigma) ** 2) * np.sin(self.omega * self.grid.time_passed + self.phase)
+                                                  self.grid.timesteps_passed)/self.sigma) ** 2) * np.sin(self.omega * self.grid.time_passed + self.phase)
+
+class ActivatedSinus(ParentSource):
+    '''sin squared as activation function'''
+
+    def __init__(self, name, wavelength, carrier_wavelength, amplitude, phase_shift):
+        super().__init__()
+        self.name = name
+        self.lamb = wavelength
+        self.carrier_lamb = carrier_wavelength
+        self.phase = phase_shift
+        self.ampl = amplitude
+
+    @property
+    def carrier_omega(self):
+        return 2 * np.pi * c0 / self.carrier_lamb
+
+    @property
+    def omega(self):
+        return 2 * np.pi * c0 / self.lamb
+
+    def step_E(self):
+        if self.carrier_omega * self.grid.time_passed < np.pi / 2:
+            self.grid.E[self.position] += self.ampl * (np.sin(self.carrier_omega * self.grid.time_passed))**2 * np.sin(self.omega * self.grid.time_passed + self.phase)
+
+        else:
+            self.grid.E[self.position] += self.ampl * np.sin(self.omega * self.grid.time_passed + self.phase)
