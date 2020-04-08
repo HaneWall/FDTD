@@ -15,6 +15,6 @@ test[90:111] = f.NonDispersiveMedia(name='Media4Epsleft', permeability=1, permit
 #test[30] = f.GaussianImpulse(name='andererImpuls', amplitude=1, peak_timestep=60, fwhm=120.e-09)
 test[20] = f.ActivatedSinus(name='sin**2acivation', wavelength=230.0e-09, carrier_wavelength= 3000.0e-9, phase_shift=0, amplitude=1)
 test[180] = f.QuasiHarmonicObserver(name='firstobserver', first_timestep=800)
-test.animate_timesteps(1200)
-print(test.local_observers[0].second_timestep)
+test.run_timesteps(900)
+print(test.local_observers[0].observedE)
 

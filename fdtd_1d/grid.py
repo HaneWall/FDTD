@@ -9,7 +9,6 @@ def curl_E(field, cell):
 def curl_B(field, cell):
     return field[cell] - field[cell - 1]
 
-
 class Grid:
 
     def __init__(self, nz, dz):

@@ -41,9 +41,14 @@ class QuasiHarmonicObserver(ParentObserver):
 
 
     def save_E(self):
-        if self.second_timestep == None:         # note that we cannot implement the second_timestep earlier, because the 'set-operator []' has not gone through
+        # note that I cannot implement the second_timestep earlier, because the 'set-operator []' has not gone through, inside the init function
+        if self.second_timestep == None:
             self._set_second_timestep()
-        if self.grid.timesteps_passed == (self.first_timestep or self.second_timestep):
+
+        if self.grid.timesteps_passed == self.first_timestep:
+            self.observedE.append(self.grid.E[self.position])
+
+        elif self.grid.timesteps_passed == self.second_timestep:
             self.observedE.append(self.grid.E[self.position])
 
     def _set_second_timestep(self):             # sets second timestep T/4 away from first timestep
