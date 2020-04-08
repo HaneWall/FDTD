@@ -5,6 +5,8 @@ from matplotlib.patches import Rectangle
 import numpy as np
 from .constants import c0
 
+
+
 def visualize(Grid):
     fig, axes = plt.subplots(2, 1, dpi=100, figsize=(12,8))
     axes[0].plot(Grid.E)
@@ -34,6 +36,11 @@ def visualize(Grid):
     for src in Grid.sources:
         src_repr = Rectangle(xy=(src.position - 0.5, -src.ampl), height=2 * src.ampl, width=1, color='red', alpha=0.3)
         axes[0].add_patch(src_repr)
+
+    for obs in Grid.local_observers:
+        obs_repr = Rectangle(xy=(obs.position - 0.2, -0.8), height=0.4, width = 0.4, color = 'green', alpha=0.3)
+        axes[0].add_patch(obs_repr)
+
     fig.tight_layout()
     plt.show()
 
@@ -42,7 +49,7 @@ class AnimateTillTimestep(ani.TimedAnimation):
 
     def __init__(self, grid_obj, final_timestep):
         self.grid = grid_obj
-        fig_ani, self.axes_ani = plt.subplots(2, 1, dpi=100, figsize=(12, 8))
+        fig_ani, self.axes_ani = plt.subplots(2, 1, dpi=100, figsize=(12, 10))
         self.final_timestep = final_timestep
         self.grid.timesteps = self.final_timestep
 
@@ -79,6 +86,10 @@ class AnimateTillTimestep(ani.TimedAnimation):
             src_repr = Rectangle(xy=(src.position - 0.5, -src.ampl), height=2 * src.ampl, width=1, color='red',
                                  alpha=0.3)
             self.axes_ani[0].add_patch(src_repr)
+
+        for obs in self.grid.local_observers:
+            obs_repr = Rectangle(xy=(obs.position - 0.5, -1.4), height=2.8, width= 1, color='green', alpha=0.3)
+            self.axes_ani[0].add_patch(obs_repr)
 
         ani.TimedAnimation.__init__(self, fig_ani, blit=True, interval=5, repeat=False)
 

@@ -118,6 +118,10 @@ class ActivatedSinus(ParentSource):
     def omega(self):
         return 2 * np.pi * c0 / self.lamb
 
+    @property
+    def period(self):
+        return self.lamb / c0
+
     def step_E(self):
         if self.carrier_omega * self.grid.time_passed < np.pi / 2:
             self.grid.E[self.position] += self.ampl * (np.sin(self.carrier_omega * self.grid.time_passed))**2 * np.sin(self.omega * self.grid.time_passed + self.phase)

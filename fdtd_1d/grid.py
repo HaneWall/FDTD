@@ -27,7 +27,7 @@ class Grid:
         self.sources = []                   # saving source.py-objects
         self.materials = []                 # saving material.py-objects
         self.boundaries = []                # saving boundary.py-objects
-
+        self.local_observers = []           # saving time-data of the field
 
     @property
     def time_passed(self):
@@ -110,4 +110,6 @@ class Grid:
         for bound in self.boundaries:
             bound.step_B()
 
-
+        # saving local points in order to extract phase and amplitude data
+        for observer in self.local_observers:
+            observer.save_E()
