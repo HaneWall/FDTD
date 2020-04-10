@@ -1,5 +1,6 @@
 from .constants import c0, eps0
 import numpy as np
+import pandas as pd
 from .visuals import visualize, AnimateTillTimestep
 
 def curl_E(field, cell):
@@ -62,6 +63,20 @@ class Grid:
     def animate_timesteps(self, timesteps):
         vid = AnimateTillTimestep(grid_obj=self, final_timestep=timesteps)
         vid.create_animation()
+
+    def get_observed_signals(self):
+        dict = {'name': [], 'position': [], 'first timestep': [], 'second timestep': [], 'amplitude': [], 'phase': []}
+        for observer in self.local_observers:
+            observer.set_amplitude_phase()
+            dict['name'].append(observer.observer_name)
+            dict['position'].append(observer.position)
+            dict['first timestep'].append(observer.first_timestep)
+            dict['second timestep'].append(observer.second_timestep)
+            dict['amplitude'].append(observer.amplitude)
+            dict['phase'].append(observer.phase)
+        tab_sig = pd.DataFrame.from_dict(dict)
+        print(tab_sig.to_string())
+
 
     def ca(self, cell):                            # Taflove convention
         return (1 - (self.conductivity[cell] * self.dt) / (2 * eps0 * self.eps[cell]))/(1 + (self.conductivity[cell] * self.dt) / (2 * eps0 * self.eps[cell]))

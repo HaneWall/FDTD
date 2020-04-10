@@ -38,7 +38,7 @@ def visualize(Grid):
         axes[0].add_patch(src_repr)
 
     for obs in Grid.local_observers:
-        obs_repr = Rectangle(xy=(obs.position - 0.2, -0.8), height=0.4, width = 0.4, color = 'green', alpha=0.3)
+        obs_repr = Rectangle(xy=(obs.position - 0.5, -1.4), height=2.8, width=1, color = 'green', alpha=0.3)
         axes[0].add_patch(obs_repr)
 
     fig.tight_layout()

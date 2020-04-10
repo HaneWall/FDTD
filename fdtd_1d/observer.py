@@ -60,13 +60,13 @@ class QuasiHarmonicObserver(ParentObserver):
                       self.observedE[1] * np.sin(self.grid.sources[0].omega * self.grid.dt * self.first_timestep) - self.observedE[0]*np.sin(self.grid.sources[0].omega * self.grid.dt * self.second_timestep))
 
     def _set_signed_amplitude(self):
-        self.signed_amplitude = self.observedE[0] / (np.cos(self.grid.sources[0].omega * self.grid.dt * self.first_timestep)*np.cos(self.signed_phase) - np.sin(self.grid.sources[0].omega * self.grid.dt * self.first_timestep)*np.sin(self.signed_phase))
+        self.signed_amplitude = self.observedE[0] / (np.cos(self.grid.sources[0].omega * self.grid.dt * self.first_timestep) * np.cos(self.signed_phase) - np.sin(self.grid.sources[0].omega * self.grid.dt * self.first_timestep)*np.sin(self.signed_phase))
 
     # in order to get more beautiful phase and amplitude data (unsigned):
 
     def set_amplitude_phase(self):
-        self._set_signed_amplitude()
         self._set_signed_phase()
+        self._set_signed_amplitude()
 
         if self.signed_amplitude > 0:
             self.amplitude = self.signed_amplitude
