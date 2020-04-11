@@ -1,3 +1,5 @@
+from .constants import c0
+
 '''
 UNDER CONSTRUCTION!
 Only works properly for courant = 0.5
@@ -62,3 +64,54 @@ class RightSideGridBoundary(Boundary):
 
     def step_B(self):
         self.grid.B[self.position] = self.arr_B.pop(0)
+
+class LeftSideMur(Boundary):
+    '''
+    incoming waves from the left hand side are getting absorbed
+    '''
+
+    def __init__(self):
+        super().__init__()
+        self.prev_E = [0, 0]
+
+    @property
+    def c_material(self):
+        u = c0 * self.grid.dt / self.grid.dz        # TODO change c0 to c
+        return (u-1)/(u+1)
+
+    def save_E(self):
+        self.prev_E[0] = self.grid.E[self.position]
+        self.prev_E[1] = self.grid.E[self.position + 1]
+
+    def step_E(self):
+        self.grid.E[self.position] = self.prev_E[1] + self.c_material *(self.grid.E[self.position + 1] - self.prev_E[0])
+
+    def save_B(self):
+        pass
+
+    def step_B(self):
+        pass
+
+class RightSideMur(Boundary):
+
+    def __init__(self):
+        super().__init__()
+        self.prev_E = [0, 0]
+
+    @property
+    def c_material(self):
+        u = c0 * self.grid.dt / self.grid.dz  # TODO change c0 to c
+        return (u - 1) / (u + 1)
+
+    def save_E(self):
+        self.prev_E[0] = self.grid.E[self.position - 1]
+        self.prev_E[1] = self.grid.E[self.position]
+
+    def step_E(self):
+        self.grid.E[self.position] = self.prev_E[0] + self.c_material * (self.grid.E[self.position - 1] - self.prev_E[1])
+
+    def save_B(self):
+        pass
+
+    def step_B(self):
+        pass

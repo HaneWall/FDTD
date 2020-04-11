@@ -20,7 +20,7 @@ class Grid:
         self.dz = dz                        # dz: width of one cell in m
         self.E = np.zeros(nz)
         self.B = np.zeros(nz)
-        self.courant = 0.5                  # 1 = magic time step ( Taflove - numerical error is minimal ), ≤1! 0.5 for absorbing boundary conditions
+        self.courant = 1                # 1 = magic time step ( Taflove - numerical error is minimal ), ≤1! 0.5 for absorbing boundary conditions
         self.dt = dz * self.courant / c0
         self.timesteps = None
         self.timesteps_passed = 0

@@ -38,10 +38,14 @@ class QuasiHarmonicObserver(ParentObserver):
         self.signed_amplitude = None
         self.phase = None
         self.amplitude = None
+        self.hard_save = []
 
 
     def save_E(self):
         # note that I cannot implement the second_timestep earlier, because the 'set-operator []' has not gone through, inside the init function
+
+        self.hard_save.append(self.grid.E[self.position])
+
         if self.second_timestep == None:
             self._set_second_timestep()
 
