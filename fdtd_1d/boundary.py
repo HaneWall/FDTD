@@ -1,4 +1,5 @@
 from .constants import c0
+import numpy as np
 
 '''
 UNDER CONSTRUCTION!
@@ -76,8 +77,12 @@ class LeftSideMur(Boundary):
         self.prev_B = [0, 0]
 
     @property
-    def c_material(self):
-        u = c0 * self.grid.dt / self.grid.dz        # TODO change c0 to c
+    def c_mat(self):
+        return c0 / np.sqrt(self.grid.eps[self.position] * self.grid.mu[self.position])
+
+    @property
+    def radiation_coeff(self):
+        u = self.c_mat * self.grid.dt / self.grid.dz
         return (u-1)/(u+1)
 
     def save_E(self):
@@ -85,14 +90,14 @@ class LeftSideMur(Boundary):
         self.prev_E[1] = self.grid.E[self.position + 1]
 
     def step_E(self):
-        self.grid.E[self.position] = self.prev_E[1] + self.c_material * (self.grid.E[self.position + 1] - self.prev_E[0])
+        self.grid.E[self.position] = self.prev_E[1] + self.radiation_coeff * (self.grid.E[self.position + 1] - self.prev_E[0])
 
     def save_B(self):
         self.prev_B[0] = self.grid.B[self.position]
         self.prev_B[1] = self.grid.B[self.position + 1]
 
     def step_B(self):
-        self.grid.B[self.position] = self.prev_B[1] + self.c_material * (self.grid.B[self.position + 1] - self.prev_B[0])
+        self.grid.B[self.position] = self.prev_B[1] + self.radiation_coeff * (self.grid.B[self.position + 1] - self.prev_B[0])
 
 class RightSideMur(Boundary):
 
@@ -102,8 +107,12 @@ class RightSideMur(Boundary):
         self.prev_B = [0, 0]
 
     @property
-    def c_material(self):
-        u = c0 * self.grid.dt / self.grid.dz  # TODO change c0 to c
+    def c_mat(self):
+        return c0 / np.sqrt(self.grid.eps[self.position] * self.grid.mu[self.position])
+
+    @property
+    def radiation_coeff(self):
+        u = self.c_mat * self.grid.dt / self.grid.dz
         return (u - 1) / (u + 1)
 
     def save_E(self):
@@ -111,11 +120,11 @@ class RightSideMur(Boundary):
         self.prev_E[1] = self.grid.E[self.position]
 
     def step_E(self):
-        self.grid.E[self.position] = self.prev_E[0] + self.c_material * (self.grid.E[self.position - 1] - self.prev_E[1])
+        self.grid.E[self.position] = self.prev_E[0] + self.radiation_coeff * (self.grid.E[self.position - 1] - self.prev_E[1])
 
     def save_B(self):
         self.prev_B[0] = self.grid.B[self.position - 1]
         self.prev_B[1] = self.grid.B[self.position]
 
     def step_B(self):
-        self.grid.B[self.position] = self.prev_B[0] + self.c_material * (self.grid.B[self.position - 1] - self.prev_B[1])
+        self.grid.B[self.position] = self.prev_B[0] + self.radiation_coeff * (self.grid.B[self.position - 1] - self.prev_B[1])
