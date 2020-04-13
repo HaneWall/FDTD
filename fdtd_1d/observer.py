@@ -31,32 +31,22 @@ class QuasiHarmonicObserver(ParentObserver):
         super().__init__()
         self.observer_name = name
         self.first_timestep = first_timestep
-        #self.second_timestep = self.first_timestep + int(self.grid.sources[0].period / (4 * self.grid.dt))         # does not work because of __setitem__
-        self.second_timestep = None
         self.observedE = []
         self.signed_phase = None
         self.signed_amplitude = None
         self.phase = None
         self.amplitude = None
-        self.hard_save = []
 
+    @property
+    def second_timestep(self):
+        return self.first_timestep + int(self.grid.sources[0].period / (4 * self.grid.dt))
 
     def save_E(self):
-        # note that I cannot implement the second_timestep earlier, because the 'set-operator []' has not gone through, inside the init function
-
-        self.hard_save.append(self.grid.E[self.position])
-
-        if self.second_timestep == None:
-            self._set_second_timestep()
-
         if self.grid.timesteps_passed == self.first_timestep:
             self.observedE.append(self.grid.E[self.position])
 
         elif self.grid.timesteps_passed == self.second_timestep:
             self.observedE.append(self.grid.E[self.position])
-
-    def _set_second_timestep(self):             # sets second timestep T/4 away from first timestep
-        self.second_timestep = self.first_timestep + int(self.grid.sources[0].period / (4 * self.grid.dt))
 
 
     def _set_signed_phase(self):
