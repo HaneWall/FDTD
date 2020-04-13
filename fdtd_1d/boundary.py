@@ -73,6 +73,7 @@ class LeftSideMur(Boundary):
     def __init__(self):
         super().__init__()
         self.prev_E = [0, 0]
+        self.prev_B = [0, 0]
 
     @property
     def c_material(self):
@@ -84,19 +85,21 @@ class LeftSideMur(Boundary):
         self.prev_E[1] = self.grid.E[self.position + 1]
 
     def step_E(self):
-        self.grid.E[self.position] = self.prev_E[1] + self.c_material *(self.grid.E[self.position + 1] - self.prev_E[0])
+        self.grid.E[self.position] = self.prev_E[1] + self.c_material * (self.grid.E[self.position + 1] - self.prev_E[0])
 
     def save_B(self):
-        pass
+        self.prev_B[0] = self.grid.B[self.position]
+        self.prev_B[1] = self.grid.B[self.position + 1]
 
     def step_B(self):
-        pass
+        self.grid.B[self.position] = self.prev_B[1] + self.c_material * (self.grid.B[self.position + 1] - self.prev_B[0])
 
 class RightSideMur(Boundary):
 
     def __init__(self):
         super().__init__()
         self.prev_E = [0, 0]
+        self.prev_B = [0, 0]
 
     @property
     def c_material(self):
@@ -111,7 +114,8 @@ class RightSideMur(Boundary):
         self.grid.E[self.position] = self.prev_E[0] + self.c_material * (self.grid.E[self.position - 1] - self.prev_E[1])
 
     def save_B(self):
-        pass
+        self.prev_B[0] = self.grid.B[self.position - 1]
+        self.prev_B[1] = self.grid.B[self.position]
 
     def step_B(self):
-        pass
+        self.grid.B[self.position] = self.prev_B[0] + self.c_material * (self.grid.B[self.position - 1] - self.prev_B[1])
