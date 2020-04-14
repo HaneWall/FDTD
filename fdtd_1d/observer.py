@@ -1,6 +1,4 @@
-import numpy as np
-from .grid import Grid
-
+from fdtd_1d.utilities import get_amplitude_and_phase
 
 class ParentObserver:
 
@@ -23,7 +21,7 @@ class ParentObserver:
 class QuasiHarmonicObserver(ParentObserver):
     '''ramping up SinusoidalImpulse via ActivatedSinus -> waiting for steadystate
         -> save two points at the observers positions in time domain with T/4 away from each other -> reconstruct sinusoidal in time domain
-        -> get Amplitude + Phase'''
+        -> get Amplitude + Phase with amplitude > 0 and based on A cos (omega * t + phi)'''
 
 # Note that phase and amplitude information is based on A*cos(wt + phi)
 
@@ -32,14 +30,20 @@ class QuasiHarmonicObserver(ParentObserver):
         self.observer_name = name
         self.first_timestep = first_timestep
         self.observedE = []
-        self.signed_phase = None
-        self.signed_amplitude = None
-        self.phase = None
-        self.amplitude = None
 
     @property
     def second_timestep(self):
         return self.first_timestep + int(self.grid.sources[0].period / (4 * self.grid.dt))
+
+    @property
+    def phase(self):
+        return get_amplitude_and_phase(grid=self.grid, first_timestep=self.first_timestep,
+                                       second_timestep=self.second_timestep, data=self.observedE)[1]
+
+    @property
+    def amplitude(self):
+        return get_amplitude_and_phase(grid=self.grid, first_timestep=self.first_timestep,
+                                       second_timestep=self.second_timestep, data=self.observedE)[0]
 
     def save_E(self):
         if self.grid.timesteps_passed == self.first_timestep:
@@ -47,29 +51,3 @@ class QuasiHarmonicObserver(ParentObserver):
 
         elif self.grid.timesteps_passed == self.second_timestep:
             self.observedE.append(self.grid.E[self.position])
-
-
-    def _set_signed_phase(self):
-        self.signed_phase = np.arctan2(self.observedE[1] * np.cos(self.grid.sources[0].omega * self.grid.dt * self.first_timestep) - self.observedE[0]*np.cos(self.grid.sources[0].omega * self.grid.dt * self.second_timestep),
-                      self.observedE[1] * np.sin(self.grid.sources[0].omega * self.grid.dt * self.first_timestep) - self.observedE[0]*np.sin(self.grid.sources[0].omega * self.grid.dt * self.second_timestep))
-
-    def _set_signed_amplitude(self):
-        self.signed_amplitude = self.observedE[0] / (np.cos(self.grid.sources[0].omega * self.grid.dt * self.first_timestep) * np.cos(self.signed_phase) - np.sin(self.grid.sources[0].omega * self.grid.dt * self.first_timestep)*np.sin(self.signed_phase))
-
-    # in order to get more beautiful phase and amplitude data (unsigned):
-
-    def set_amplitude_phase(self):
-        self._set_signed_phase()
-        self._set_signed_amplitude()
-
-        if self.signed_amplitude > 0:
-            self.amplitude = self.signed_amplitude
-            self.phase = self.signed_phase
-
-        elif self.signed_amplitude < 0 and self.signed_phase >= 0:
-            self.amplitude = -self.signed_amplitude
-            self.phase = self.signed_phase - np.pi
-
-        elif self.signed_amplitude < 0 and self.signed_phase < 0:
-            self.amplitude = -self.signed_amplitude
-            self.phase = self.signed_phase + np.pi

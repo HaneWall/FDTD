@@ -1,27 +1,9 @@
 import fdtd_1d as f
 import numpy as np
-from fdtd_1d.constants import c0
 import matplotlib.pyplot as plt
 
-
-test = f.Grid(101, 4.3e-09) # creates 201 grid cells (á 4.3e-09m)
-
-#test[0] = f.LeftSideGridBoundary()
-#test[125] = f.RightSideGridBoundary()   # note that 201 grid cells means cell 200 is the last
-#test[80:121] = f.NonDispersiveMedia(name='Medium4Eps', permeability=1, permittivity=4, conductivity=0)
-#test[100:171] = f.NonDispersiveMedia(name='Media2Epsleft', permeability=1, permittivity=2, conductivity=5e04)
-#test[75:171] = f.NonDispersiveMedia(name='Media4Epsleft', permeability=1, permittivity=4, conductivity=5e04)
-test[50:81] = f.NonDispersiveMedia(name='Media4Epsleft', permeability=1, permittivity=4, conductivity=0)
-#test[20] = f.SinusoidalImpulse(name='SinusMid', amplitude=1, phase_shift=0, wavelength=430.0e-09)
-#test[20] = f.EnvelopeSinus(name='EnevelopedSinusMitte', wavelength=200e-09, phase_shift=0, amplitude=1, fwhm=600e-09, peak_timestep=200)
-#test[50] = f.GaussianImpulse(name='a ndererImpuls', amplitude=1, peak_timestep=60, fwhm=100.e-09)
-test[34] = f.ActivatedSinus(name='sin**2acivation', wavelength=900.0e-09, carrier_wavelength=6000.0e-9, phase_shift=0, amplitude=1)
-test[96] = f.QuasiHarmonicObserver(name='firstobserver', first_timestep=6000)
-test[0] = f.LeftSideMur()
-test[100] = f.RightSideMur()
-
-test.run_timesteps(6300)
-test.get_observed_signals()
+from fdtd_1d.constants import c0
+from fdtd_1d.utilities import get_amplitude_and_phase
 
 
 def theory_dielectric_slab(grid, d, n, timestep_start, timestep_end):
@@ -29,17 +11,77 @@ def theory_dielectric_slab(grid, d, n, timestep_start, timestep_end):
     k = n * k0
     q = ((n - 1) ** 2) / ((n + 1) ** 2) * np.exp(-2j * k * d)
     theo_E = []
-    theo_phase = []
     timestep_range = np.arange(timestep_start, timestep_end, 1)
     for ts in timestep_range:
         e_inc = np.exp(1j * grid.sources[0].omega * grid.dt * ts)
         e_tr = e_inc * (2/(n+1)) * (2*n / (n+1)) * (1/(1-q)) * np.exp(-1j*(k+k0)*d)
         amplitude = np.imag(e_tr) / 2
         theo_E.append(amplitude)
-        theo_phase.append(np.angle(e_tr))
-    return theo_E, theo_phase
+        theo_amplitude, theo_phase = get_amplitude_and_phase(grid=grid, first_timestep=timestep_start, second_timestep=(timestep_end - 1), data=[theo_E[0], theo_E[-1]])
+    return theo_E, theo_amplitude, theo_phase
 
-data_theo_E, data_theo_phase = theory_dielectric_slab(grid=test, n=2, d=31*test.dz, timestep_start=6000, timestep_end=6300)
+
+# BUILD SETUP
+
+# Step 1: init grid
+test = f.Grid(301, 4.3e-09) # creates 201 grid cells (á 4.3e-09m)
+
+# Step 2: init media
+test[200:251] = f.NonDispersiveMedia(name='Media4Epsleft', permeability=1, permittivity=4, conductivity=0)
+
+# Step 3: init sources
+#test[20] = f.ActivatedSinus(name='sin**2acivation', wavelength=900.0e-09, carrier_wavelength=6000.0e-9, phase_shift=0, amplitude=1)
+test[20] = f.EnvelopeSinus(name='test', wavelength=200.0e-09, fwhm=600.e-09, amplitude=1, phase_shift=0, peak_timestep=300)
+# Step 4: add observer
+#test[96] = f.QuasiHarmonicObserver(name='firstobserver', first_timestep=6000)
+
+# Step 5: add boundaries
+test[0] = f.LeftSideMur()
+test[300] = f.RightSideMur()
+
+# Step 6: run simulation
+test.animate_timesteps(2000)
+
+# Step 7: misc
+#test.get_observed_signals()
+'''
+
+wavelengths = [100.e-09 + i * 50.e-09 for i in range(0, 31)]
+measured_phase = []
+measured_amplitude = []
+theo_phase = []
+theo_amplitude = []
+N_lambda = []
+
+for wavelength in wavelengths:
+    obj = 'wave' + str(wavelength)
+    obj = f.Grid(101, 4.3e-09)
+    obj[50:81] = f.NonDispersiveMedia(name='Media4Epsleft', permeability=1, permittivity=4, conductivity=0)
+    obj[34] = f.ActivatedSinus(name='sin**2acivation', wavelength=wavelength, carrier_wavelength=6000.0e-9, phase_shift=0, amplitude=1)
+    obj[96] = f.QuasiHarmonicObserver(name='firstobserver', first_timestep=6000)
+    obj[0] = f.LeftSideMur()
+    obj[100] = f.RightSideMur()
+    obj.run_timesteps(8000)
+    measured_phase.append(obj.local_observers[0].phase)
+    measured_amplitude.append(obj.local_observers[0].amplitude)
+    theo_amplitude.append(theory_dielectric_slab(grid=obj, n=2, d=31*obj.dz, timestep_start=6000, timestep_end=6300)[1])
+    theo_phase.append(theory_dielectric_slab(grid=obj, n=2, d=31*obj.dz, timestep_start=6000, timestep_end=6300)[2])
+    N_lambda.append(wavelength/obj.dz)
+
+fig, axes = plt.subplots(1, 2)
+
+axes[0].plot(N_lambda, np.array(measured_amplitude)/np.array(theo_amplitude), marker='o', linestyle = 'dashed', label='measured/theoretical amplitude')
+axes[0].plot(N_lambda, np.ones(len(wavelengths)), label='exact')
+axes[0].legend(loc='best')
+axes[0].set_xlabel(r'$N_{\lambda}$')
+axes[1].plot(N_lambda, np.array(measured_phase)/np.array(theo_phase), marker='o', linestyle='dashed', label='measured/theoretical phase')
+axes[1].plot(N_lambda, np.ones(len(wavelengths)), label='exact')
+axes[1].legend(loc='best')
+axes[1].set_xlabel(r'$N_{\lambda}$')
+plt.show()
+
+
+data_theo_E, data_theo_amplitude, data_theo_phase = theory_dielectric_slab(grid=test, n=2, d=31*test.dz, timestep_start=6000, timestep_end=6300)
 
 
 x = np.arange(6000, 6300, 1)
@@ -53,4 +95,5 @@ axes.plot([test.local_observers[0].first_timestep, test.local_observers[0].secon
 axes.legend(loc='best')
 plt.show()
 
-print(data_theo_phase[0])
+print(data_theo_amplitude, data_theo_phase)
+'''

@@ -68,7 +68,8 @@ class RightSideGridBoundary(Boundary):
 
 class LeftSideMur(Boundary):
     '''
-    incoming waves from the left hand side are getting absorbed
+    1st Order Mur
+    incoming waves from the right hand side are getting absorbed
     '''
 
     def __init__(self):
@@ -100,6 +101,10 @@ class LeftSideMur(Boundary):
         self.grid.B[self.position] = self.prev_B[1] + self.radiation_coeff * (self.grid.B[self.position + 1] - self.prev_B[0])
 
 class RightSideMur(Boundary):
+    '''
+    1st Order Mur
+    incoming waves from the left hand side are getting absorbed
+    '''
 
     def __init__(self):
         super().__init__()

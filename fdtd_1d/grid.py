@@ -58,7 +58,7 @@ class Grid:
             self.update()
             self.timesteps_passed += 1
 
-        visualize(self)
+        #visualize(self)
 
     def animate_timesteps(self, timesteps):
         vid = AnimateTillTimestep(grid_obj=self, final_timestep=timesteps)
@@ -67,7 +67,6 @@ class Grid:
     def get_observed_signals(self):
         dict = {'name': [], 'position': [], 'first timestep': [], 'second timestep': [], 'amplitude': [], 'phase': []}
         for observer in self.local_observers:
-            observer.set_amplitude_phase()
             dict['name'].append(observer.observer_name)
             dict['position'].append(observer.position)
             dict['first timestep'].append(observer.first_timestep)
