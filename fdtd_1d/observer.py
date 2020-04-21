@@ -45,9 +45,9 @@ class QuasiHarmonicObserver(ParentObserver):
         return get_amplitude_and_phase(grid=self.grid, first_timestep=self.first_timestep,
                                        second_timestep=self.second_timestep, data=self.observedE)[0]
 
-    def save_E(self):
+    def save_Ez(self):
         if self.grid.timesteps_passed == self.first_timestep:
-            self.observedE.append(self.grid.E[self.position])
+            self.observedE.append(self.grid.Ez[self.position])
 
         elif self.grid.timesteps_passed == self.second_timestep:
-            self.observedE.append(self.grid.E[self.position])
+            self.observedE.append(self.grid.Ez[self.position])

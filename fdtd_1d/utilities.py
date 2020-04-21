@@ -9,7 +9,7 @@ def get_amplitude_and_phase(grid, first_timestep, second_timestep, data):
                 np.cos(grid.sources[0].omega * grid.dt * first_timestep) * np.cos(signed_phase) -
                 np.sin(grid.sources[0].omega * grid.dt * first_timestep) * np.sin(signed_phase))
 
-    if signed_amplitude > 0:
+    if signed_amplitude >= 0:
         amplitude = signed_amplitude
         phase = signed_phase
         return amplitude, phase
@@ -23,3 +23,4 @@ def get_amplitude_and_phase(grid, first_timestep, second_timestep, data):
         amplitude = -signed_amplitude
         phase = signed_phase + np.pi
         return amplitude, phase
+

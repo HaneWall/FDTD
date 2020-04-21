@@ -26,7 +26,7 @@ class GaussianImpulse(ParentSource):
 
     @property
     def sigma(self):
-        return self.fwhm / (self.grid.dz * 2.355)       # approximating 2.255 = 2*sqrt(2*ln(2))
+        return self.fwhm / (self.grid.dx * 2.355)       # approximating 2.255 = 2*sqrt(2*ln(2))
 
     def __init__(self, name, amplitude, peak_timestep, fwhm):
         super().__init__()
@@ -36,8 +36,8 @@ class GaussianImpulse(ParentSource):
         self.ampl = amplitude
 
     # as soft source
-    def step_E(self):
-        self.grid.E[self.position] += self.ampl * np.exp(-0.5 * ((self.peak_timestep -
+    def step_Ez(self):
+        self.grid.Ez[self.position] += self.ampl * np.exp(-0.5 * ((self.peak_timestep -
                                                       self.grid.timesteps_passed) / self.sigma) ** 2)
 
 
@@ -64,8 +64,8 @@ class SinusoidalImpulse(ParentSource):
 
     # as hard source - note that reflection information is forfeited in order to create perfect shape
     # for soft source change '=' to '+=' and vice versa
-    def step_E(self):
-        self.grid.E[self.position] += self.ampl * np.sin(self.omega * self.grid.time_passed + self.phase)
+    def step_Ez(self):
+        self.grid.Ez[self.position] += self.ampl * np.sin(self.omega * self.grid.time_passed + self.phase)
 
 class EnvelopeSinus(ParentSource):
     '''creates an enveloped oscillation (ampl * gaussian_impulse * sin(wt + phase))'''
@@ -82,7 +82,7 @@ class EnvelopeSinus(ParentSource):
 
     @property
     def sigma(self):
-        return self.fwhm / (self.grid.dz * 2.355)  # approximating 2.355 = 2*sqrt(2*ln(2))
+        return self.fwhm / (self.grid.dx * 2.355)  # approximating 2.355 = 2*sqrt(2*ln(2))
 
     @property
     def omega(self):
@@ -95,8 +95,8 @@ class EnvelopeSinus(ParentSource):
 
     # as hard source - note that reflection information is forfeited in order to create perfect shape
     # for soft source change '=' to '+=' and vice versa
-    def step_E(self):
-        self.grid.E[self.position] += self.ampl * np.exp(-0.5 * ((self.peak_timestep -
+    def step_Ez(self):
+        self.grid.Ez[self.position] += self.ampl * np.exp(-0.5 * ((self.peak_timestep -
                                                   self.grid.timesteps_passed)/self.sigma) ** 2) * np.sin(self.omega * self.grid.time_passed + self.phase)
 
 class ActivatedSinus(ParentSource):
@@ -122,9 +122,9 @@ class ActivatedSinus(ParentSource):
     def period(self):
         return self.lamb / c0
 
-    def step_E(self):
+    def step_Ez(self):
         if self.carrier_omega * self.grid.time_passed < np.pi / 2:
-            self.grid.E[self.position] += self.ampl * (np.sin(self.carrier_omega * self.grid.time_passed))**2 * np.sin(self.omega * self.grid.time_passed + self.phase)
+            self.grid.Ez[self.position] += self.ampl * (np.sin(self.carrier_omega * self.grid.time_passed))**2 * np.sin(self.omega * self.grid.time_passed + self.phase)
 
         else:
-            self.grid.E[self.position] += self.ampl * np.sin(self.omega * self.grid.time_passed + self.phase)
+            self.grid.Ez[self.position] += self.ampl * np.sin(self.omega * self.grid.time_passed + self.phase)
