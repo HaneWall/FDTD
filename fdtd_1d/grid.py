@@ -20,7 +20,7 @@ class Grid:
         self.dx = dx                        # dx: width of one cell in m
         self.Ez = np.zeros(nx)
         self.Hy = np.zeros(nx)
-        self.courant = 1                    # 1 = magic time step ( Taflove - numerical error is minimal )
+        self.courant = 1                   # 1 = magic time step ( Taflove - numerical error is minimal )
         self.dt = dx * self.courant / c0
         self.timesteps = None
         self.timesteps_passed = 0
@@ -58,7 +58,7 @@ class Grid:
             self.update()
             self.timesteps_passed += 1
 
-        visualize(self)
+        #visualize(self)
 
     def animate_timesteps(self, timesteps):
         vid = AnimateTillTimestep(grid_obj=self, final_timestep=timesteps)
@@ -100,7 +100,9 @@ class Grid:
         for index in range(0, self.nx - 1):
             self.step_Hy(index)
 
-        # updating Hy - Sources (under construction)
+        # updating Hy - Sources (partly under construction)
+        for source in self.sources:
+            source.step_Hy()
 
         # updating Hy - boundaries
         for bound in self.boundaries:
