@@ -91,7 +91,7 @@ class Grid:
 
     # main algorithm
     def update(self):
-        # note that step_E() is dependent on object
+        # note that steps are dependent on object
         # saving Hy - boundaries
         for bound in self.boundaries:
             bound.save_Hy()
@@ -100,7 +100,7 @@ class Grid:
         for index in range(0, self.nx - 1):
             self.step_Hy(index)
 
-        # updating Hy - Sources (partly under construction)
+        # updating Hy - Sources
         for source in self.sources:
             source.step_Hy()
 
@@ -123,7 +123,6 @@ class Grid:
         # updating E - boundaries
         for bound in self.boundaries:
             bound.step_Ez()
-
 
         # saving local points in order to extract phase and amplitude data
         for observer in self.local_observers:

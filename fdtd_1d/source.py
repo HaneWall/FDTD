@@ -50,8 +50,9 @@ class SinusoidalImpulse(ParentSource):
     '''creates oscillating source'''
     # currently only supports E-Sources
 
-    def __init__(self, name, wavelength, phase_shift, amplitude):
+    def __init__(self, name, wavelength, phase_shift, amplitude,tfsf=False):
         super().__init__()
+        self.tfsf = tfsf
         self.source_name = name
         self.lamb = wavelength
         self.phase = phase_shift
@@ -73,14 +74,18 @@ class SinusoidalImpulse(ParentSource):
         self.grid.Ez[self.position] += self.ampl * np.sin(self.omega * self.grid.time_passed + self.phase)
 
     def step_Hy(self):
-        self.grid.Hy[self.position] += -np.sqrt(eps0/mu0) * self.ampl * np.sin(self.omega * self.grid.time_passed + self.phase)
+        if not self.tfsf:
+            pass
+        else:
+            self.grid.Hy[self.position] += -np.sqrt(eps0/mu0) * self.ampl * np.sin(self.omega * self.grid.time_passed + self.phase)
 
 class EnvelopeSinus(ParentSource):
     '''creates an enveloped oscillation (ampl * gaussian_impulse * sin(wt + phase))'''
     # currently only supports E-Sources
 
-    def __init__(self, name, wavelength, phase_shift, amplitude, fwhm, peak_timestep):
+    def __init__(self, name, wavelength, phase_shift, amplitude, fwhm, peak_timestep, tfsf=False):
         super().__init__()
+        self.tfsf = tfsf
         self.source_name = name
         self.lamb = wavelength
         self.phase = phase_shift
@@ -101,17 +106,23 @@ class EnvelopeSinus(ParentSource):
         return self.lamb / c0
 
 
-    # as hard source - note that reflection information is forfeited in order to create perfect shape
-    # for soft source change '=' to '+=' and vice versa
     def step_Ez(self):
         self.grid.Ez[self.position] += self.ampl * np.exp(-0.5 * ((self.peak_timestep -
+                                                  self.grid.timesteps_passed)/self.sigma) ** 2) * np.sin(self.omega * self.grid.time_passed + self.phase)
+
+    def step_Hy(self):
+        if not self.tfsf:
+            pass
+        else:
+            self.grid.Hy[self.position] += -np.sqrt(eps0/mu0) * self.ampl * np.exp(-0.5 * ((self.peak_timestep -
                                                   self.grid.timesteps_passed)/self.sigma) ** 2) * np.sin(self.omega * self.grid.time_passed + self.phase)
 
 class ActivatedSinus(ParentSource):
     '''sin squared as activation function'''
 
-    def __init__(self, name, wavelength, carrier_wavelength, amplitude, phase_shift):
+    def __init__(self, name, wavelength, carrier_wavelength, amplitude, phase_shift, tfsf=False):
         super().__init__()
+        self.tfsf = tfsf
         self.name = name
         self.lamb = wavelength
         self.carrier_lamb = carrier_wavelength
@@ -138,8 +149,12 @@ class ActivatedSinus(ParentSource):
             self.grid.Ez[self.position] += self.ampl * np.sin(self.omega * self.grid.time_passed + self.phase)
 
     def step_Hy(self):
-        if self.carrier_omega * self.grid.time_passed < np.pi / 2:
-            self.grid.Hy[self.position] += -np.sqrt(eps0/mu0) * self.ampl * (np.sin(self.carrier_omega * self.grid.time_passed))**2 * np.sin(self.omega * self.grid.time_passed + self.phase)
+        if not self.tfsf:
+            pass
 
         else:
-            self.grid.Hy[self.position] += -np.sqrt(eps0/mu0) * self.ampl * np.sin(self.omega * self.grid.time_passed + self.phase)
+            if self.carrier_omega * self.grid.time_passed < np.pi / 2:
+                self.grid.Hy[self.position] += -np.sqrt(eps0/mu0) * self.ampl * (np.sin(self.carrier_omega * self.grid.time_passed))**2 * np.sin(self.omega * self.grid.time_passed + self.phase)
+
+            else:
+                self.grid.Hy[self.position] += -np.sqrt(eps0/mu0) * self.ampl * np.sin(self.omega * self.grid.time_passed + self.phase)
