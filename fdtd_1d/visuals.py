@@ -68,7 +68,7 @@ class AnimateTillTimestep(ani.TimedAnimation):
         self.axes_ani[0].set_xlim([0, self.grid.nx -1])
         self.axes_ani[1].set_xlim([0, self.grid.nx - 1])
         self.axes_ani[0].set_ylim([-1.5, 1.5])
-        self.axes_ani[1].set_ylim([-1.5/np.sqrt(mu0/eps0) , 1.5/np.sqrt(mu0/eps0)])
+        self.axes_ani[1].set_ylim([-1.5/np.sqrt(mu0/eps0), 1.5/np.sqrt(mu0/eps0)])
 
         for mat in self.grid.materials:
             media_repr_0 = Rectangle(xy=(mat.position[0] - 0.5, -1.4), height=2.8, width=(mat.position[-1] - mat.position[0] + 1),

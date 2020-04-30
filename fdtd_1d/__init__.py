@@ -5,3 +5,4 @@ from .boundary import Boundary, LeftSideGridBoundary, RightSideGridBoundary, Lef
 from .visuals import visualize, AnimateTillTimestep
 from .observer import ParentObserver, QuasiHarmonicObserver
 from .utilities import get_amplitude_and_phase
+from .benchmarks import Harmonic_Slab_Setup

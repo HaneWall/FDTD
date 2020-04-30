@@ -1,6 +1,7 @@
 from .constants import c0, eps0, mu0
 import numpy as np
 import pandas as pd
+from numba import jit
 from .visuals import visualize, AnimateTillTimestep
 
 def curl_Ez(field, cell):
@@ -40,25 +41,25 @@ class Grid:
         placing_obj._place_into_grid(grid=self, index=key)
 
 
-    def run_time(self, simulate_t):
+    def run_time(self, simulate_t, vis=True):
         # simulate_t in s
         self.timesteps = int(simulate_t / self.dt)
 
         for time_step in range(1, self.timesteps + 1):          # range output: [..)
             self.update()
             self.timesteps_passed += 1
+        if vis:
+            visualize(self)
 
-        visualize(self)
-
-    def run_timesteps(self, timesteps):
+    def run_timesteps(self, timesteps, vis=True):
         # discrete timesteps
         self.timesteps = timesteps
 
         for time_step in range(1, self.timesteps + 1):
             self.update()
             self.timesteps_passed += 1
-
-        #visualize(self)
+        if vis:
+            visualize(self)
 
     def animate_timesteps(self, timesteps):
         vid = AnimateTillTimestep(grid_obj=self, final_timestep=timesteps)
