@@ -2,7 +2,7 @@ import fdtd_1d as f
 import numpy as np
 
 # Load setup/benchmark:
-setup = f.Harmonic_Slab_Setup(dx=4.e-09, length_grid_in_dx=50, length_media_in_dx=30, start_index_media=5, wavelength=90.e-09, epsilon=4, ampl=1, timesteps=1800)
+setup = f.Harmonic_Slab_Setup(dx=4.e-09, length_grid_in_dx=40, length_media_in_dx=30, start_index_media=5, wavelength=300.e-09, epsilon=2, ampl=1, timesteps=2000)
 setup.run_benchmark()
 
 '''

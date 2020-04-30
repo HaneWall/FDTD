@@ -25,7 +25,7 @@ class Harmonic_Slab_Setup:
         self.dx = dx
         self.eps = epsilon
         self.Nx = length_grid_in_dx
-        self.end_length_media = length_media_in_dx
+        self.length_media = length_media_in_dx
         self.lamb = wavelength
         self.ampl = ampl
         self.wo_phase = []
@@ -37,7 +37,7 @@ class Harmonic_Slab_Setup:
 
     def _grid_wo_slab(self):
         position_src = self.start_media - 1
-        position_obs = self.Nx - 11
+        position_obs = self.Nx - 3
         end_mur = self.Nx - 1
         wo_grid = f.Grid(self.Nx, dx=self.dx)
         wo_grid[position_src] = f.ActivatedSinus(name='SinsquaredActivated', wavelength=self.lamb, carrier_wavelength=10000.e-09, phase_shift=0, amplitude=self.ampl, tfsf=True)
@@ -49,7 +49,7 @@ class Harmonic_Slab_Setup:
 
     def _grids_w_slab(self):
         position_src = self.start_media - 1
-        position_obs = self.Nx - 11
+        position_obs = self.Nx - 3
         end_mur = self.Nx - 1
         for ind in self.indices:
             # Step 1: init grid
@@ -82,27 +82,31 @@ class Harmonic_Slab_Setup:
         fig, axes = plt.subplots(2, 2)
         fig.suptitle(r'$\epsilon_r=$ {epsilon}'.format(epsilon=self.eps) + r'   $N_{\lambda_{media}}=$' + '{0:.3}'.format(self.lamb/(self.dx*np.sqrt(self.eps))), fontsize=20)
         axes[0][0].plot(np.array(self.indices) - self.start_media, np.array(self.theo_amplitude), label='theorie', color='blue', marker='o', alpha=0.5)
-        axes[0][0].grid(True, linestyle='-', alpha=0.4)
+        axes[0][0].grid(True, linestyle=(0, (1, 5)), color='black', linewidth=1)
         axes[0][0].plot(np.array(self.indices) - self.start_media, np.array(self.exp_amplitude), label='FDTD', linestyle='dashed', color='red', marker='s', alpha=0.5)
         axes[0][0].legend(loc='best')
-        axes[0][0].set_xlabel('Breite des Mediums in ' + r'$\Delta_x$')
-        axes[0][0].set_ylabel('Transmittierte Amplitude ' + r'$Ez_{tr}$')
+        axes[0][0].set_xlabel('Breite des Mediums in ' + r'$\Delta_x$', fontsize=14)
+        axes[0][0].set_ylabel('Transmittierte Amplitude ' + r'$Ez_{tr}$', fontsize=14)
+        axes[0][0].set_xlim([0, self.length_media + 1])
         axes[0][1].plot(np.array(self.indices) - self.start_media, np.array(self.theo_amplitude) / np.array(self.exp_amplitude), color='black')
-        axes[0][1].set_ylabel(r'$\frac{E_{tr,theo}}{E_{tr,FDTD}}$', fontsize=18)
-        axes[0][1].set_xlabel('Breite des Mediums in ' + r'$\Delta_x$')
-        axes[0][1].grid(True, linestyle='-', alpha=0.4)
-        axes[1][0].set_ylabel('Phasenunterschied')
+        axes[0][1].set_ylabel(r'$E_{tr,theo}$ / $E_{tr,FDTD}$', fontsize=14)
+        axes[0][1].set_xlabel('Breite des Mediums in ' + r'$\Delta_x$', fontsize=14)
+        axes[0][1].grid(True, linestyle=(0, (1, 5)), color='black', linewidth=1)
+        axes[0][1].set_xlim([0, self.length_media + 1])
+        axes[1][0].set_ylabel('Phasenunterschied', fontsize=14)
         axes[1][0].plot(np.array(self.indices) - self.start_media, self.theo_phasenunterschied, label='theorie', color='blue', alpha=0.5)
-        axes[1][0].set_xlabel('Breite des Mediums in ' + r'$\Delta_x$')
-        axes[1][0].grid(True, linestyle='-', alpha=0.4)
+        axes[1][0].set_xlabel('Breite des Mediums in ' + r'$\Delta_x$', fontsize=14)
+        axes[1][0].grid(True, linestyle=(0, (1, 5)), color='black', linewidth=1)
         axes[1][0].plot(np.array(self.indices) - self.start_media, -np.array(self.exp_phase) + self.wo_phase, color='red', linestyle='dashed',
                         label='FDTD', alpha=0.5)
+        axes[1][0].set_xlim([0, self.length_media + 1])
         axes[1][0].legend()
-        axes[1][1].set_xlabel('Breite des Mediums in ' + r'$\Delta_x$')
-        axes[1][1].set_ylabel(r'$d(\phi_{exp},\phi_{theo})$')
+        axes[1][1].set_xlabel('Breite des Mediums in ' + r'$\Delta_x$', fontsize=14)
+        axes[1][1].set_ylabel(r'$d(\phi_{exp},\phi_{theo})$', fontsize=14)
         axes[1][1].plot(np.array(self.indices) - self.start_media,
                         np.abs(-np.array(self.exp_phase) + self.wo_phase - np.array(self.theo_phasenunterschied)), color='black')
-        axes[1][1].grid(True, linestyle='-', alpha=0.4)
+        axes[1][1].grid(True, linestyle=(0, (1, 5)), color='black', linewidth=1)
+        axes[1][1].set_xlim([0, self.length_media + 1])
         plt.show()
 
     def run_benchmark(self):
