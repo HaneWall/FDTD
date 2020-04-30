@@ -1,27 +1,28 @@
-from .constants import c0, eps0
+from .constants import c0, eps0, mu0
 import numpy as np
 import pandas as pd
+from numba import jit
 from .visuals import visualize, AnimateTillTimestep
 
-def curl_E(field, cell):
+def curl_Ez(field, cell):
     return field[cell + 1] - field[cell]
 
 
-def curl_B(field, cell):
+def curl_Hy(field, cell):
     return field[cell] - field[cell - 1]
 
 class Grid:
 
-    def __init__(self, nz, dz):
-        self.mu = np.ones(nz)               # permeability - free space / vacuum
-        self.eps = np.ones(nz)              # permittivity - free space / vacuum
-        self.conductivity = np.zeros(nz)
-        self.nz = nz                        # nz: number of cells in z-direction
-        self.dz = dz                        # dz: width of one cell in m
-        self.E = np.zeros(nz)
-        self.B = np.zeros(nz)
-        self.courant = 1                # 1 = magic time step ( Taflove - numerical error is minimal ), ≤1! 0.5 for absorbing boundary conditions
-        self.dt = dz * self.courant / c0
+    def __init__(self, nx, dx):
+        self.mu = np.ones(nx)               # permeability - free space / vacuum
+        self.eps = np.ones(nx)              # permittivity - free space / vacuum
+        self.conductivity = np.zeros(nx)
+        self.nx = nx                        # nx: number of cells in x-direction
+        self.dx = dx                        # dx: width of one cell in m
+        self.Ez = np.zeros(nx)
+        self.Hy = np.zeros(nx)
+        self.courant = 1                   # 1 = magic time step ( Taflove - numerical error is minimal )
+        self.dt = dx * self.courant / c0
         self.timesteps = None
         self.timesteps_passed = 0
         self.sources = []                   # saving source.py-objects
@@ -40,25 +41,25 @@ class Grid:
         placing_obj._place_into_grid(grid=self, index=key)
 
 
-    def run_time(self, simulate_t):
+    def run_time(self, simulate_t, vis=True):
         # simulate_t in s
         self.timesteps = int(simulate_t / self.dt)
 
         for time_step in range(1, self.timesteps + 1):          # range output: [..)
             self.update()
             self.timesteps_passed += 1
+        if vis:
+            visualize(self)
 
-        visualize(self)
-
-    def run_timesteps(self, timesteps):
+    def run_timesteps(self, timesteps, vis=True):
         # discrete timesteps
         self.timesteps = timesteps
 
         for time_step in range(1, self.timesteps + 1):
             self.update()
             self.timesteps_passed += 1
-
-        #visualize(self)
+        if vis:
+            visualize(self)
 
     def animate_timesteps(self, timesteps):
         vid = AnimateTillTimestep(grid_obj=self, final_timestep=timesteps)
@@ -78,51 +79,56 @@ class Grid:
 
 
     def ca(self, cell):                            # Taflove convention
-        return (1 - (self.conductivity[cell] * self.dt) / (2 * eps0 * self.eps[cell]))/(1 + (self.conductivity[cell] * self.dt) / (2 * eps0 * self.eps[cell]))
+        return (1 - (self.conductivity[cell] * self.dt) / (2 * eps0 * self.eps[cell])) / (1 + (self.conductivity[cell] * self.dt) / (2 * eps0 * self.eps[cell]))
 
     def cb(self, cell):                            # Taflove convention
-        return self.courant / (self.eps[cell] * (1 + (self.conductivity[cell] * self.dt) / (2 * eps0 * self.eps[cell])))
+        return 1 / (1 + (self.conductivity[cell] * self.dt) / (2 * eps0 * self.eps[cell]))
 
-    def step_E(self, cell):
-        self.E[cell] = self.ca(cell) * self.E[cell] - c0 * self.cb(cell) * curl_B(self.B, cell)
+    def step_Ez(self, cell):
+        self.Ez[cell] = self.ca(cell) * self.Ez[cell] + self.dt / (eps0 * self.eps[cell] * self.dx) * self.cb(cell) * curl_Hy(self.Hy, cell)
 
-    def step_B(self, cell):
-        self.B[cell] = self.B[cell] - self.courant / c0 * curl_E(self.E, cell)
+    def step_Hy(self, cell):
+        self.Hy[cell] = self.Hy[cell] + self.dt/(mu0 * self.mu[cell] * self.dx) * curl_Ez(self.Ez, cell)
 
     # main algorithm
     def update(self):
-        # note that step_E() is dependent on object
-
-        # saving E - boundaries
+        # note that steps are dependent on object
+        # saving Hy - boundaries
         for bound in self.boundaries:
-            bound.save_E()
+            bound.save_Hy()
 
-        # uüpdating E - field, index [1,last cell]
-        for index in range(1, self.nz):
-            self.step_E(index)
+        # updating Hy - field, index [first cell, last cell - 1]
+        for index in range(0, self.nx - 1):
+            self.step_Hy(index)
+
+        # updating Hy - Sources
+        for source in self.sources:
+            source.step_Hy()
+
+        # updating Hy - boundaries
+        for bound in self.boundaries:
+            bound.step_Hy()
+
+        # saving Ez - boundaries
+        for bound in self.boundaries:
+            bound.save_Ez()
+
+        # updating E - field, index [1,last cell]
+        for index in range(1, self.nx):
+            self.step_Ez(index)
 
         # updating E - Sources
         for source in self.sources:
-            source.step_E()
+            source.step_Ez()
 
         # updating E - boundaries
         for bound in self.boundaries:
-            bound.step_E()
-
-        # saving B - boundaries
-        for bound in self.boundaries:
-            bound.save_B()
-
-        # updating B - field, index [first cell, last cell - 1]
-        for index in range(0, self.nz - 1):
-            self.step_B(index)
-
-        # updating B - Sources (under construction)
-
-        # updating B - boundaries
-        for bound in self.boundaries:
-            bound.step_B()
+            bound.step_Ez()
 
         # saving local points in order to extract phase and amplitude data
         for observer in self.local_observers:
-            observer.save_E()
+            observer.save_Ez()
+
+
+
+
