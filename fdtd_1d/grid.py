@@ -1,7 +1,6 @@
 from .constants import c0, eps0, mu0
 import numpy as np
 import pandas as pd
-from numba import jit
 from .visuals import visualize, AnimateTillTimestep
 
 def curl_Ez(field, cell):
