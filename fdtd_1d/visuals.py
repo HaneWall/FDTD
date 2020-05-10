@@ -22,13 +22,13 @@ def visualize(Grid):
     axes[1].set_ylabel(r'$H_y$', fontsize=12, rotation=0)
     for mat in Grid.materials:
         media_repr_0 = Rectangle(xy=(mat.position[0]-0.5, -1.4), height=2.8, width=(mat.position[-1] - mat.position[0] + 1),
-                               color='grey', fill=True, alpha=0.3)
+                               color='grey', fill=True, alpha=mat.eps * 0.12)
         axes[0].add_patch(media_repr_0)
         axes[0].annotate(
             s=r'$\epsilon_r$={0:.2f}'.format(mat.eps) + '\n' + r'$\sigma$={0:.2f}'.format(mat.conductivity),
             xy=(media_repr_0.get_x() + 0.1, media_repr_0.get_y() + 0.2), color='black')
         media_repr_1 = Rectangle(xy=(mat.position[0] - 0.5, -1.4), height=2.8, width=(mat.position[-1] - mat.position[0] + 1),
-                                 color='grey', fill=True, alpha=0.3)
+                                 color='grey', fill=True, alpha=mat.eps * 0.12)
         axes[1].add_patch(media_repr_1)
         axes[1].annotate(
             s=r'$\epsilon_r$={0:.2f}'.format(mat.eps) + '\n' + r'$\sigma$={0:.2f}'.format(mat.conductivity),
@@ -72,14 +72,14 @@ class AnimateTillTimestep(ani.TimedAnimation):
 
         for mat in self.grid.materials:
             media_repr_0 = Rectangle(xy=(mat.position[0] - 0.5, -1.4), height=2.8, width=(mat.position[-1] - mat.position[0] + 1),
-                                   color='grey', fill=True, alpha=0.3)
+                                   color='grey', fill=True, alpha=mat.eps * 0.12)
             self.axes_ani[0].add_patch(media_repr_0)
             self.axes_ani[0].annotate(
                 s=r'$\epsilon_r$={0:.2f}'.format(mat.eps) + '\n' + r'$\sigma$={0:.2f}'.format(mat.conductivity),
                 xy=(media_repr_0.get_x() + 0.1, media_repr_0.get_y() + 0.2), color='black')
 
             media_repr_1 = Rectangle(xy=(mat.position[0] - 0.5 , -1.4), height=2.8, width=(mat.position[-1] - mat.position[0] + 1),
-                                     color='grey', fill=True, alpha=0.3)
+                                     color='grey', fill=True, alpha=mat.eps * 0.12)
             self.axes_ani[1].add_patch(media_repr_1)
 
         for src in self.grid.sources:

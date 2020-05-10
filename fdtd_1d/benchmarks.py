@@ -17,6 +17,118 @@ def theory_dielectric_slab(grid):
     theo_phasenunterschied = np.angle(e_tr)
     return theo_amplitude, theo_phasenunterschied
 
+class TiO2_Si02_Dielectric_Mirror_Setup:
+
+    def __init__(self, N_lambda_media, wavelength_guided_for, wavelength, ampl, timesteps, number_of_layer_pairs, vary_layers=False, vary_inc_wavelength=False):
+        self.N_lambda = N_lambda_media
+        self.layer_number = [0 + i for i in range(number_of_layer_pairs)]
+        self.number_of_layer = number_of_layer_pairs
+        self.ampl = ampl
+        self.timesteps = timesteps
+        self.lamb = wavelength
+        self.lamb_guided = wavelength_guided_for
+        self.vary_layers = vary_layers
+        self.vary_lambda = vary_inc_wavelength
+        self.ti_n = 2.519                                                               # refractiveindex.info
+        self.si_n = 1.453                                                               # refractiveindex.info
+        self.dx = self.lamb/(self.ti_n * self.N_lambda)
+        self.d_ti = int(self.lamb_guided / (self.ti_n * 4 * self.dx))
+        self.d_si = int(self.lamb_guided / (self.si_n * 4 * self.dx))
+        self.Nx = self.number_of_layer*(self.d_si + self.d_ti) + 14
+        self.starting_locations_ti = [8 + i*(self.d_ti + self.d_si) for i in self.layer_number]
+        self.starting_locations_si = np.array(self.starting_locations_ti) + self.d_ti
+        self.position_src = 6
+        self.position_obs = 3
+        self.incident_wavelengths = [self.lamb + (i / 201) * self.lamb_guided for i in np.arange(0, 201, 1)]
+        self.refl_ampl = []
+        self.theory_R = []
+
+    def _construct_non_vary_grid(self):
+        end_mur = self.Nx - 1
+        grid_non_vary = f.Grid(dx=self.dx, nx=self.Nx)
+        grid_non_vary[0] = f.LeftSideMur()
+        grid_non_vary[end_mur] = f.RightSideMur()
+        grid_non_vary[self.position_src] = f.ActivatedSinus(name='Laser', wavelength=self.lamb, carrier_wavelength=6000e-09, tfsf=True, amplitude=self.ampl, phase_shift=0)
+        grid_non_vary[self.position_obs] = f.QuasiHarmonicObserver(name='Observer', first_timestep=self.timesteps - 200)
+
+        for layer_pair in self.layer_number:
+            ti_start = self.starting_locations_ti[layer_pair]
+            si_start = self.starting_locations_si[layer_pair]
+            grid_non_vary[ti_start:si_start] = f.NonDispersiveMedia('TiO2', permittivity=self.ti_n**2, permeability=1, conductivity=0)
+            grid_non_vary[si_start:(si_start+self.d_si)] = f.NonDispersiveMedia('SiO2', permittivity=self.si_n**2, permeability=1, conductivity=0)
+
+        grid_non_vary.animate_timesteps(self.timesteps)
+        self.refl_ampl.append(grid_non_vary.local_observers[0].amplitude)
+
+    def _construct_vary_grid(self):
+        for layer in self.layer_number:
+            Nx = (layer + 1) * (self.d_si + self.d_ti) + 12
+            end_mur = Nx - 1
+            grid_vary = f.Grid(dx=self.dx, nx=Nx)
+            grid_vary[end_mur] = f.RightSideMur()
+            grid_vary[0] = f.LeftSideMur()
+            grid_vary[self.position_obs] = f.QuasiHarmonicObserver(name='Observer', first_timestep=self.timesteps - 300)
+            grid_vary[self.position_src] = f.ActivatedSinus(name='Laser', wavelength=self.lamb, carrier_wavelength=6000e-09, tfsf=True, amplitude=self.ampl, phase_shift=0)
+
+            for layers in range(0, layer + 1):
+                ti_start = self.starting_locations_ti[layers]
+                si_start = self.starting_locations_si[layers]
+                grid_vary[ti_start:si_start] = f.NonDispersiveMedia('TiO2', permittivity=self.ti_n**2, permeability=1, conductivity=0)
+                grid_vary[si_start:(si_start + self.d_si)] = f.NonDispersiveMedia('SiO2', permittivity=self.si_n**2, permeability=1, conductivity=0)
+
+            grid_vary.run_timesteps(self.timesteps, vis=False)
+            self.refl_ampl.append(grid_vary.local_observers[0].amplitude)
+            self.theory_R.append(((self.si_n**(2*(layer+1))-self.ti_n**(2*(layer+1)))/(self.si_n**(2*(layer+1))+self.ti_n**(2*(layer+1))))**2)
+
+    def _construct_vary_wavelength_grid(self):
+        for wavelength in self.incident_wavelengths:
+            end_mur = self.Nx - 1
+            grid_vary_lamb = f.Grid(dx=self.dx, nx=self.Nx)
+            grid_vary_lamb[0] = f.LeftSideMur()
+            grid_vary_lamb[end_mur] = f.RightSideMur()
+            grid_vary_lamb[self.position_src] = f.ActivatedSinus('Laser', wavelength=wavelength, carrier_wavelength=6000e-09, tfsf=True, amplitude=self.ampl, phase_shift=0)
+            grid_vary_lamb[self.position_obs] = f.QuasiHarmonicObserver(name='Observer', first_timestep=self.timesteps - 200)
+
+            for layer_pair in self.layer_number:
+                ti_start = self.starting_locations_ti[layer_pair]
+                si_start = self.starting_locations_si[layer_pair]
+                grid_vary_lamb[ti_start:si_start] = f.NonDispersiveMedia('TiO2', permittivity=self.ti_n**2, permeability=1, conductivity=0)
+                grid_vary_lamb[si_start:(si_start + self.d_si)] = f.NonDispersiveMedia('SiO2', permittivity=self.si_n**2, permeability=1, conductivity=0)
+
+            grid_vary_lamb.run_timesteps(self.timesteps, vis=False)
+            self.refl_ampl.append(grid_vary_lamb.local_observers[0].amplitude)
+
+    def _visualize_vary_grid(self):
+        fig, axes = plt.subplots(1, 1)
+        axes.plot(np.array(self.layer_number)+1, np.array(self.refl_ampl)**2, linestyle='dashed', color='blue', marker='o', alpha=0.5, label='FDTD')
+        axes.plot(np.array(self.layer_number)+1, np.array(self.theory_R), linestyle='dashed', color='red', marker='o', alpha=0.5, label='model')
+        axes.legend(loc='best')
+        axes.grid(True, linestyle=(0, (1, 5)), color='black', linewidth=1)
+        axes.set_xlabel('Anzahl der Paare', fontsize=14)
+        axes.set_ylabel(r'Reflektionsgrad $\mathcal{R}$', fontsize=14)
+        plt.show()
+
+    def _visualize_vary_lamb(self):
+        fig, axes = plt.subplots(1, 1)
+        axes.plot(np.array(self.incident_wavelengths)*10**9, np.array(self.refl_ampl)**2, linestyle='dashed', color='blue', marker='o',
+                  alpha=0.5, label='FDTD')
+        axes.grid(True, linestyle=(0, (1, 5)), color='black', linewidth=1)
+        axes.set_xlabel(r'$\lambda$ in nm', fontsize=14)
+        axes.set_ylabel(r'Reflektionsgrad $\mathcal{R}$', fontsize=14)
+        plt.show()
+
+    def run_benchmark(self):
+        if self.vary_layers:
+            self._construct_vary_grid()
+            #self._visualize_vary_grid()
+
+        elif self.vary_lambda:
+            self._construct_vary_wavelength_grid()
+            #self._visualize_vary_lamb()
+
+        else:
+            self._construct_non_vary_grid()
+
 class Harmonic_Slab_Setup:
 
     def __init__(self, dx,  length_grid_in_dx, length_media_in_dx, start_index_media, wavelength, epsilon, ampl, timesteps):
