@@ -1,58 +1,12 @@
 import fdtd_1d as f
-import matplotlib.pyplot as plt
-import numpy as np
 
 # Load setup/benchmark:
 #setup = f.Harmonic_Slab_Setup(dx=4.e-09, length_grid_in_dx=40, length_media_in_dx=30, start_index_media=5, wavelength=160.e-09, epsilon=4, ampl=1, timesteps=2000)
 #setup.run_benchmark()
-#setup_2 = f.TiO2_Si02_Dielectric_Mirror_Setup(N_lambda_media=40, wavelength_guided_for=800.e-09, wavelength=800e-09, ampl=1, timesteps=5500, number_of_layer_pairs=5, vary_layers=False, vary_inc_wavelength=False)
-#setup_2.run_benchmark()
-
-
-incident_wavelengths = [400.e-09 + (i / 201) * 800.e-09 for i in np.arange(0, 201, 1)]
-setup_2 = f.TiO2_Si02_Dielectric_Mirror_Setup(N_lambda_media=10, wavelength_guided_for=800.e-09, wavelength=400e-09, ampl=1, timesteps=3000, number_of_layer_pairs=5, vary_layers=False, vary_inc_wavelength=True)
+setup_2 = f.TiO2_Si02_Dielectric_Mirror_Setup(N_lambda_media=20, wavelength_guided_for=800.e-09, wavelength=800e-09, ampl=1, timesteps=10000, number_of_layer_pairs=10, vary_layers=False, vary_inc_wavelength=False)
 setup_2.run_benchmark()
 
-dbr_2 = np.array(setup_2.refl_ampl)**2
-setup_5 = f.TiO2_Si02_Dielectric_Mirror_Setup(N_lambda_media=10, wavelength_guided_for=800.e-09, wavelength=400e-09, ampl=1, timesteps=4000, number_of_layer_pairs=5, vary_layers=False, vary_inc_wavelength=True)
-setup_5.run_benchmark()
-dbr_5 = np.array(setup_5.refl_ampl)**2
-setup_10 = f.TiO2_Si02_Dielectric_Mirror_Setup(N_lambda_media=10, wavelength_guided_for=800.e-09, wavelength=400e-09, ampl=1, timesteps=4000, number_of_layer_pairs=10, vary_layers=False, vary_inc_wavelength=True)
-setup_10.run_benchmark()
-dbr_10 = np.array(setup_10.refl_ampl)**2
-
-fig, axes = plt.subplots(1, 1)
-axes.plot(np.array(incident_wavelengths)*10**9, dbr_2, linestyle='dashed', color='red', marker='o', alpha=0.5, label='DBR-2')
-axes.plot(np.array(incident_wavelengths)*10**9, dbr_5, linestyle='dashed', color='blue', marker='o', alpha=0.5, label='DBR-5')
-axes.plot(np.array(incident_wavelengths)*10**9, dbr_10, linestyle='dashed', color='green', marker='o', alpha=0.5, label='DBR-10')
-axes.legend(loc='best')
-axes.grid(True, linestyle=(0, (1, 5)), color='black', linewidth=1)
-axes.set_xlabel(r'$\lambda$ in nm', fontsize=14)
-axes.set_ylabel(r'Reflektionsgrad $\mathcal{R}$', fontsize=14)
-plt.show()
-
-
 '''
-refl_amplitudes = []
-theorie = []
-layer_numbers = range(1, 21)
-
-for layer in layer_numbers:
-    setup = f.TiO2_Si02_Dielectric_Mirror_Setup(N_lambda_media=25, wavelength_guided_for=800.e-09, wavelength=800e-09, ampl=1, timesteps=7000, number_of_layer_pairs=layer)
-    setup.run_benchmark()
-    refl_amplitudes.append(setup.refl_ampl)
-    theorie.append(((setup.si_n**(2*layer)-setup.ti_n**(2*layer))/(setup.si_n**(2*layer)+setup.ti_n**(2*layer)))**2)
-
-fig, axes = plt.subplots(1, 1)
-axes.plot(layer_numbers, np.array(refl_amplitudes)**2, linestyle='dashed', color='blue', marker='o', alpha=0.5, label='FDTD')
-axes.plot(layer_numbers, np.array(theorie), linestyle='dashed', color='red', marker='o', alpha=0.5, label='model')
-axes.legend(loc='best')
-axes.grid(True, linestyle=(0, (1, 5)), color='black', linewidth=1)
-axes.set_xlabel('Anzahl der Paare', fontsize=14)
-axes.set_ylabel(r'Reflektionsgrad $\mathcal{R}$', fontsize=14)
-plt.show()
-
-
 # Or build your own setup
 
 # Step 1: init grid

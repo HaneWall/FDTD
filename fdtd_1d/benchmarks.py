@@ -39,7 +39,7 @@ class TiO2_Si02_Dielectric_Mirror_Setup:
         self.starting_locations_si = np.array(self.starting_locations_ti) + self.d_ti
         self.position_src = 6
         self.position_obs = 3
-        self.incident_wavelengths = [self.lamb + (i / 201) * self.lamb_guided for i in np.arange(0, 201, 1)]
+        self.incident_wavelengths = [self.lamb + (i / 101) * self.lamb_guided for i in np.arange(0, 101, 1)]
         self.refl_ampl = []
         self.theory_R = []
 
@@ -57,7 +57,7 @@ class TiO2_Si02_Dielectric_Mirror_Setup:
             grid_non_vary[ti_start:si_start] = f.NonDispersiveMedia('TiO2', permittivity=self.ti_n**2, permeability=1, conductivity=0)
             grid_non_vary[si_start:(si_start+self.d_si)] = f.NonDispersiveMedia('SiO2', permittivity=self.si_n**2, permeability=1, conductivity=0)
 
-        grid_non_vary.animate_timesteps(self.timesteps)
+        grid_non_vary.run_timesteps(self.timesteps)
         self.refl_ampl.append(grid_non_vary.local_observers[0].amplitude)
 
     def _construct_vary_grid(self):
