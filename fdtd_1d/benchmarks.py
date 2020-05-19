@@ -120,11 +120,11 @@ class TiO2_Si02_Dielectric_Mirror_Setup:
     def run_benchmark(self):
         if self.vary_layers:
             self._construct_vary_grid()
-            #self._visualize_vary_grid()
+            self._visualize_vary_grid()
 
         elif self.vary_lambda:
             self._construct_vary_wavelength_grid()
-            #self._visualize_vary_lamb()
+            self._visualize_vary_lamb()
 
         else:
             self._construct_non_vary_grid()

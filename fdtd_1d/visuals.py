@@ -65,7 +65,8 @@ class AnimateTillTimestep(ani.TimedAnimation):
 
         self.axes_ani[0].add_line(self.line_0)
         self.axes_ani[1].add_line(self.line_1)
-        self.axes_ani[0].set_xlim([0, self.grid.nx -1])
+
+        self.axes_ani[0].set_xlim([0, self.grid.nx - 1])
         self.axes_ani[1].set_xlim([0, self.grid.nx - 1])
         self.axes_ani[0].set_ylim([-1.5, 1.5])
         self.axes_ani[1].set_ylim([-1.5/np.sqrt(mu0/eps0), 1.5/np.sqrt(mu0/eps0)])

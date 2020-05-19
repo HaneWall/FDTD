@@ -37,8 +37,8 @@ class GaussianImpulse(ParentSource):
         self.ampl = amplitude
 
     def step_Ez(self):
-        self.grid.Ez[self.position] += self.ampl * np.exp(-0.5 * (((self.peak_timestep - 0.5) -
-                                                                   (self.grid.timesteps_passed + 0.5)) / self.sigma) ** 2)
+        self.grid.Ez[self.position] += self.ampl * np.exp(-0.5 * (((self.peak_timestep) -
+                                                                   (self.grid.timesteps_passed)) / self.sigma) ** 2)
     def step_Hy(self):
         if not self.tfsf:
             pass
@@ -71,7 +71,7 @@ class SinusoidalImpulse(ParentSource):
     # as hard source - note that reflection information is forfeited in order to create perfect shape
     # for soft source change '=' to '+=' and vice versa
     def step_Ez(self):
-        self.grid.Ez[self.position] += self.ampl * np.sin(self.omega * (self.grid.time_passed + self.grid.dt) + self.phase)
+        self.grid.Ez[self.position] += self.ampl * np.sin(self.omega * self.grid.time_passed + self.phase)
 
     def step_Hy(self):
         if not self.tfsf:
@@ -107,8 +107,7 @@ class EnvelopeSinus(ParentSource):
 
 
     def step_Ez(self):
-        self.grid.Ez[self.position] += self.ampl * np.exp(-0.5 * (((self.peak_timestep - 0.5) -
-                                                                   (self.grid.timesteps_passed + 0.5))/self.sigma) ** 2) * np.sin(self.omega * (self.grid.time_passed + self.grid.dt) + self.phase)
+        self.grid.Ez[self.position] += self.ampl * np.exp(-0.5 * (((self.peak_timestep - self.grid.timesteps_passed)/self.sigma) ** 2)) * np.sin(self.omega * self.grid.time_passed + self.phase)
 
     def step_Hy(self):
         if not self.tfsf:
@@ -143,10 +142,10 @@ class ActivatedSinus(ParentSource):
 
     def step_Ez(self):
         if self.carrier_omega * self.grid.time_passed < np.pi / 2:
-            self.grid.Ez[self.position] += self.ampl * (np.sin(self.carrier_omega * (self.grid.time_passed + self.grid.dt)))**2 * np.sin(self.omega * (self.grid.time_passed + self.grid.dt) + self.phase)
+            self.grid.Ez[self.position] += self.ampl * (np.sin(self.carrier_omega * self.grid.time_passed))**2 * np.sin(self.omega * self.grid.time_passed  + self.phase)
 
         else:
-            self.grid.Ez[self.position] += self.ampl * np.sin(self.omega * (self.grid.time_passed + self.grid.dt) + self.phase)
+            self.grid.Ez[self.position] += self.ampl * np.sin(self.omega * self.grid.time_passed  + self.phase)
 
     def step_Hy(self):
         if not self.tfsf:

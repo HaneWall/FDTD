@@ -20,10 +20,13 @@ class Grid:
         self.dx = dx                        # dx: width of one cell in m
         self.Ez = np.zeros(nx)
         self.Hy = np.zeros(nx)
+        self.J_p = np.zeros(nx)
+        self.P = np.zeros(nx)
         self.courant = 1                   # 1 = magic time step ( Taflove - numerical error is minimal )
         self.dt = dx * self.courant / c0
         self.timesteps = None
         self.timesteps_passed = 0
+        self.all_E_mats = set()
         self.sources = []                   # saving source.py-objects
         self.materials = []                 # saving material.py-objects
         self.boundaries = []                # saving boundary.py-objects
@@ -83,8 +86,11 @@ class Grid:
     def cb(self, cell):                            # Taflove convention
         return 1 / (1 + (self.conductivity[cell] * self.dt) / (2 * eps0 * self.eps[cell]))
 
+    def step_P(self, cell):
+        self.P[cell] = self.P[cell] + self.dt * self.J_p[cell]
+
     def step_Ez(self, cell):
-        self.Ez[cell] = self.ca(cell) * self.Ez[cell] + self.dt / (eps0 * self.eps[cell] * self.dx) * self.cb(cell) * curl_Hy(self.Hy, cell)
+        self.Ez[cell] = self.ca(cell) * self.Ez[cell] + self.dt / (eps0 * self.eps[cell]) * self.cb(cell) * (curl_Hy(self.Hy, cell) / self.dx - self.J_p[cell])
 
     def step_Hy(self, cell):
         self.Hy[cell] = self.Hy[cell] + self.dt/(mu0 * self.mu[cell] * self.dx) * curl_Ez(self.Ez, cell)
@@ -92,21 +98,10 @@ class Grid:
     # main algorithm
     def update(self):
         # note that steps are dependent on object
-        # saving Hy - boundaries
-        for bound in self.boundaries:
-            bound.save_Hy()
+        # updating polarisation P
+        for index in range(1, self.nx):
+            self.step_P(index)
 
-        # updating Hy - field, index [first cell, last cell - 1]
-        for index in range(0, self.nx - 1):
-            self.step_Hy(index)
-
-        # updating Hy - Sources
-        for source in self.sources:
-            source.step_Hy()
-
-        # updating Hy - boundaries
-        for bound in self.boundaries:
-            bound.step_Hy()
 
         # saving Ez - boundaries
         for bound in self.boundaries:
@@ -123,6 +118,28 @@ class Grid:
         # updating E - boundaries
         for bound in self.boundaries:
             bound.step_Ez()
+
+        # saving Hy - boundaries
+        for bound in self.boundaries:
+            bound.save_Hy()
+
+        # updating Hy - field, index [first cell, last cell - 1]
+        for index in range(0, self.nx - 1):
+            self.step_Hy(index)
+
+        # updating Hy - Sources
+        for source in self.sources:
+            source.step_Hy()
+
+        # updating Hy - boundaries
+        for bound in self.boundaries:
+            bound.step_Hy()
+
+        # updating polarisation current J_p
+        for index in self.all_E_mats:
+            for mat in self.materials:
+                if index in mat.position:
+                    mat.step_J_p(index)
 
         # saving local points in order to extract phase and amplitude data
         for observer in self.local_observers:
