@@ -90,10 +90,10 @@ class LorentzMedium(Vacuum):
         return (1 - self.gamma/2 * self.grid.dt) / (1 + self.gamma/2 * self.grid.dt)
 
     def epsilon_real(self, omega):
-        return self.eps + (self.chi_1 * self.w_0**2) / ((self.w_0**2 - omega**2)**2 + self.gamma**2 * omega**2)
+        return self.eps + (self.chi_1 * self.w_0**2 * (self.w_0**2 - omega**2)) / ((self.w_0**2 - omega**2)**2 + self.gamma**2 * omega**2)
 
     def epsilon_imag(self, omega):
-        return (-self.chi_1 * self.w_0**2 * self.gamma * omega) / ((self.w_0**2 - omega**2)**2 + self.gamma**2 * omega**2)
+        return (self.chi_1 * self.w_0**2 * self.gamma * omega) / ((self.w_0**2 - omega**2)**2 + self.gamma**2 * omega**2)
 
     def step_J_p(self, index):
         self.grid.J_p[index] = self.b * self.grid.J_p[index] + self.a * (eps0 * self.chi_1 * self.grid.Ez[index] - self.grid.P[index])

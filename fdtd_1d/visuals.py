@@ -44,6 +44,20 @@ def visualize(Grid):
     fig.tight_layout()
     plt.show()
 
+def visualize_permittivity(Grid):
+    number_of_plots = len(Grid.materials)
+    list = np.arange(0, number_of_plots, 1)
+    omega = np.arange(1e12, 1e18, 1e12)
+    fig, axes = plt.subplots(1, number_of_plots, dpi=100)
+
+    for ax, mat in zip(axes, list):
+        ax.grid(True, linestyle=(0, (1, 5)), color='black', linewidth=1)
+        ax.semilogx(omega, Grid.materials[mat].epsilon_real(omega), label=r'$\epsilon_{real}$')
+        ax.semilogx(omega, Grid.materials[mat].epsilon_imag(omega), label=r'$\epsilon_{imag}$')
+        ax.legend(loc='best')
+        ax.set_xlabel(r'$\omega$')
+
+    plt.show()
 
 class AnimateTillTimestep(ani.TimedAnimation):
 

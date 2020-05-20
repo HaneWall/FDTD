@@ -1,7 +1,7 @@
 from .constants import c0, eps0, mu0
 import numpy as np
 import pandas as pd
-from .visuals import visualize, AnimateTillTimestep
+from .visuals import visualize, AnimateTillTimestep, visualize_permittivity
 
 def curl_Ez(field, cell):
     return field[cell + 1] - field[cell]
@@ -67,6 +67,9 @@ class Grid:
         vid = AnimateTillTimestep(grid_obj=self, final_timestep=timesteps)
         vid.create_animation()
 
+    def visualize_permittivity(self):
+        visualize_permittivity(self)
+
     def get_observed_signals(self):
         dict = {'name': [], 'position': [], 'first timestep': [], 'second timestep': [], 'amplitude': [], 'phase': []}
         for observer in self.local_observers:
@@ -101,7 +104,6 @@ class Grid:
         # updating polarisation P
         for index in range(1, self.nx):
             self.step_P(index)
-
 
         # saving Ez - boundaries
         for bound in self.boundaries:
