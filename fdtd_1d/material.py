@@ -58,11 +58,14 @@ class NonDispersiveMedia(Vacuum):
         self.mu = permeability
         self.conductivity = conductivity
 
-    def epsilon_real(self):
+    def epsilon_real(self, omega):
         return self.eps
 
-    def epsilon_imag(self):
+    def epsilon_imag(self, omega):
         return 0
+
+    def epsilon_complex(self, omega):
+        return self.eps
 
     def step_J_p(self, index):
         pass
@@ -94,6 +97,9 @@ class LorentzMedium(Vacuum):
 
     def epsilon_imag(self, omega):
         return (self.chi_1 * self.w_0**2 * self.gamma * omega) / ((self.w_0**2 - omega**2)**2 + self.gamma**2 * omega**2)
+
+    def epsilon_complex(self, omega):
+        return (self.epsilon_real(omega) + 1j*self.epsilon_imag(omega))
 
     def step_J_p(self, index):
         self.grid.J_p[index] = self.b * self.grid.J_p[index] + self.a * (eps0 * self.chi_1 * self.grid.Ez[index] - self.grid.P[index])
