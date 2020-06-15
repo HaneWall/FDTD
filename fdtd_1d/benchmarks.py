@@ -261,6 +261,9 @@ class Harmonic_Slab_Lorentz_Setup:
         self.exp_phase = []
         self.exp_amplitude = []
         self.eps_real = []
+        self.eps_imag = []
+        self.eps_complex = []
+        self.n_real = []
         self.timesteps = timesteps
 
     def _grid_wo_slab(self):
@@ -308,10 +311,14 @@ class Harmonic_Slab_Lorentz_Setup:
             # if list self.eps_real is empty:
             if not self.eps_real:
                 self.eps_real.append(w_grid.materials[0].epsilon_real(w_grid.sources[0].omega))
+                self.eps_imag.append(w_grid.materials[0].epsilon_imag(w_grid.sources[0].omega))
+                self.eps_complex.append(w_grid.materials[0].epsilon_complex(w_grid.sources[0].omega))
+                self.n_real.append(np.sqrt((np.abs(self.eps_complex[0]) + self.eps_real[0])/2))
+
 
     def _visualize(self):
         fig, axes = plt.subplots(2, 2)
-        fig.suptitle(r'$\epsilon_{real}=$'+'{0:.3}'.format(self.eps_real[0]) + r'   $N_{\lambda_{media}}=$' + '{0:.3}'.format(self.lamb/(self.dx*np.sqrt(self.eps_real[0]))), fontsize=20)
+        fig.suptitle(r'$n_{real}=$'+'{0:.3}'.format(self.n_real[0]) + r'     $N_{\lambda_{media}}=$' + '{0:.3}'.format(self.lamb/(self.dx*self.n_real[0])), fontsize=20)
         axes[0][0].plot(np.array(self.indices) - self.start_media, np.array(self.theo_amplitude), label='theorie', color='blue', marker='o', alpha=0.5)
         axes[0][0].grid(True, linestyle=(0, (1, 5)), color='black', linewidth=1)
         axes[0][0].plot(np.array(self.indices) - self.start_media, np.array(self.exp_amplitude), label='FDTD', linestyle='dashed', color='red', marker='s', alpha=0.5)
