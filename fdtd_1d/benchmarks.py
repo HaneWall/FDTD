@@ -46,8 +46,8 @@ class TiO2_Si02_Dielectric_Mirror_Setup:
         self.ti_n = 2.519                                                               # refractiveindex.info
         self.si_n = 1.453                                                               # refractiveindex.info
         self.dx = self.lamb/(self.ti_n * self.N_lambda)
-        self.d_ti = int(self.lamb_guided / (self.ti_n * 4 * self.dx))
-        self.d_si = int(self.lamb_guided / (self.si_n * 4 * self.dx))
+        self.d_ti = int(self.lamb_guided / (self.ti_n * 4 * self.dx))                   # huge problem
+        self.d_si = int(self.lamb_guided / (self.si_n * 4 * self.dx))                   # huge problem
         self.Nx = self.number_of_layer*(self.d_si + self.d_ti) + 14
         self.starting_locations_ti = [8 + i*(self.d_ti + self.d_si) for i in self.layer_number]
         self.starting_locations_si = np.array(self.starting_locations_ti) + self.d_ti
@@ -242,7 +242,7 @@ class Harmonic_Slab_Setup:
 
 class Harmonic_Slab_Lorentz_Setup:
 
-    def __init__(self, dx,  length_grid_in_dx, length_media_in_dx, start_index_media, wavelength, ampl, conductivity, eps_inf, gamma, w0, chi_1, timesteps):
+    def __init__(self, dx,  length_grid_in_dx, length_media_in_dx, start_index_media, wavelength, ampl, conductivity, eps_inf, gamma, w0, chi_1, chi_2, chi_3, timesteps):
         self.indices = [start_index_media + 2 + i for i in np.arange(0, length_media_in_dx - 1)]
         self.start_media = start_index_media
         self.dx = dx
@@ -255,6 +255,8 @@ class Harmonic_Slab_Lorentz_Setup:
         self.gamma = gamma
         self.w0 = w0
         self.chi_1 = chi_1
+        self.chi_2 = chi_2
+        self.chi_3 = chi_3
         self.wo_phase = []
         self.theo_phasenunterschied = []
         self.theo_amplitude = []
@@ -288,7 +290,7 @@ class Harmonic_Slab_Lorentz_Setup:
             w_grid = f.Grid(nx=self.Nx, dx=self.dx)
 
             # Step 2: init media
-            w_grid[self.start_media:ind] = f.LorentzMedium(name='media', permeability=1, eps_inf=self.eps_inf, conductivity=self.conductivity, gamma=self.gamma, chi_1=self.chi_1, w0=self.w0)
+            w_grid[self.start_media:ind] = f.LorentzMedium(name='media', permeability=1, eps_inf=self.eps_inf, conductivity=self.conductivity, gamma=self.gamma, chi_1=self.chi_1, chi_2=self.chi_2, chi_3=self.chi_3, w0=self.w0)
 
             # Step 3: init source
             w_grid[position_src] = f.ActivatedSinus(name='SinsquaredActivated', wavelength=self.lamb, carrier_wavelength=(self.lamb * 30), phase_shift=0, amplitude=self.ampl, tfsf=True)

@@ -1,4 +1,6 @@
 from .grid import Grid
+from werkzeug.utils import cached_property
+import numpy as np
 from .constants import eps0
 
 
@@ -67,13 +69,16 @@ class NonDispersiveMedia(Vacuum):
     def epsilon_complex(self, omega):
         return self.eps
 
+    def step_P(self, index):
+        pass
+
     def step_J_p(self, index):
         pass
 
 class LorentzMedium(Vacuum):
-    ''' electron cloud behaves like harmonic oscillator '''
+    ''' electron cloud behaves like one or multiple harmonic oscillator '''
 
-    def __init__(self, name, permeability, conductivity, eps_inf, gamma, w0, chi_1):
+    def __init__(self, name, permeability, conductivity, eps_inf, gamma, w0, chi_1, chi_2, chi_3):
         super().__init__()
         self.material_name = name
         self.model = 'Lorentz'
@@ -83,26 +88,88 @@ class LorentzMedium(Vacuum):
         self.gamma = gamma
         self.w_0 = w0
         self.chi_1 = chi_1
+        self.chi_2 = chi_2
+        self.chi_3 = chi_3
+        self.J_p_k = None
+        self.P_k = None
 
-    @property
+    @cached_property
     def a(self):
-        return (self.grid.dt * self.w_0**2) / (1 + self.gamma/2 * self.grid.dt)
+        a_list = []
+        for w_k, gamma_k in zip(self.w_0, self.gamma):
+            a_list.append((self.grid.dt * w_k**2) / (1 + gamma_k/2 * self.grid.dt))
+        a = np.array(a_list)
+        return a
 
-    @property
+    @cached_property
     def b(self):
-        return (1 - self.gamma/2 * self.grid.dt) / (1 + self.gamma/2 * self.grid.dt)
+        b_list = []
+        for gamma_k in self.gamma:
+            b_list.append((1 - gamma_k/2 * self.grid.dt) / (1 + gamma_k/2 * self.grid.dt))
+        b = np.array(b_list)
+        return b
+
+    @cached_property
+    def chi_matrix(self):
+        chi_m = np.transpose(np.array([self.chi_1, self.chi_2, self.chi_3]))
+        return chi_m
+
+    def E_vec(self, index):
+        vec = np.array([self.grid.Ez[index], self.grid.Ez[index]**2, self.grid.Ez[index]**3])
+        return vec
 
     def epsilon_real(self, omega):
-        return self.eps + (self.chi_1 * self.w_0**2 * (self.w_0**2 - omega**2)) / ((self.w_0**2 - omega**2)**2 + self.gamma**2 * omega**2)
+        eps_real = np.real(self.epsilon_complex(omega))
+        #for w_k, gamma_k, chi_1_k in zip(self.w_0, self.gamma, self.chi_1):
+            #eps_real += (chi_1_k * w_k**2 * (w_k**2 - omega**2)) / ((w_k**2 - omega**2)**2 + gamma_k**2 * omega**2)
+        return eps_real
 
     def epsilon_imag(self, omega):
-        return (self.chi_1 * self.w_0**2 * self.gamma * omega) / ((self.w_0**2 - omega**2)**2 + self.gamma**2 * omega**2)
+        eps_imag = np.imag(self.epsilon_complex(omega))
+        #eps_imag = 0
+        #for w_k, gamma_k, chi_1_k in zip(self.w_0, self.gamma, self.chi_1):
+            #eps_imag += (chi_1_k * w_k**2 * gamma_k * omega) / ((w_k**2 - omega**2)**2 + gamma_k**2 * omega**2)
+        return eps_imag
 
     def epsilon_complex(self, omega):
-        return (self.epsilon_real(omega) + 1j*self.epsilon_imag(omega))
+        eps_complex = self.eps
+        for w_k, gamma_k, chi_1_k in zip(self.w_0, self.gamma, self.chi_1):
+            eps_complex += chi_1_k * (w_k ** 2) / (w_k ** 2 - omega ** 2 - 1j * gamma_k * omega)
+        return eps_complex
+
+    def step_P_k(self, index, k):
+        self.P_k[index][k] = self.P_k[index][k] + self.grid.dt * self.J_p_k[index][k]
+
+    def step_P(self, index):
+        # init new arrays to accomplish multiple lorentz poles
+        if self.J_p_k is None:
+            self.J_p_k = np.zeros((self.grid.nx, len(self.chi_1)))
+        if self.P_k is None:
+            self.P_k = np.zeros((self.grid.nx, len(self.chi_1)))
+
+        # first step_P_k for each oscillator
+        for k in range(len(self.P_k[index])):
+            self.step_P_k(index, k)
+
+        # scnd: sum P_k (each oscillator) to get total P
+        sum = 0
+        for k_value in self.P_k[index]:
+            sum += k_value
+        self.grid.P[index] = sum
+
+    def step_J_p_k(self, index, k):
+        self.J_p_k[index][k] = self.b[k] * self.J_p_k[index][k] + self.a[k]*(eps0 * np.matmul(self.chi_matrix[k], self.E_vec(index)) - self.P_k[index][k])
 
     def step_J_p(self, index):
-        self.grid.J_p[index] = self.b * self.grid.J_p[index] + self.a * (eps0 * self.chi_1 * self.grid.Ez[index] - self.grid.P[index])
+        # first: step_J_p_k for each oscillator
+        for k in range(len(self.J_p_k[index])):
+            self.step_J_p_k(index, k)
+
+        # scnd: sum J_p_k (each oscillator) to get total J_p
+        sum = 0
+        for k_value in self.J_p_k[index]:
+            sum += k_value
+        self.grid.J_p[index] = sum
 
 class CustomMedia(Vacuum):
     # UNDER CONSTRUCTION!!!

@@ -30,9 +30,11 @@ def visualize(Grid):
         media_repr_1 = Rectangle(xy=(mat.position[0] - 0.5, -1.4), height=2.8, width=(mat.position[-1] - mat.position[0] + 1),
                                  color='grey', fill=True, alpha=mat.eps * 0.12)
         axes[1].add_patch(media_repr_1)
-        axes[1].annotate(
-            s=r'$\epsilon_r$={0:.2f}'.format(mat.eps) + '\n' + r'$\sigma$={0:.2f}'.format(mat.conductivity),
-            xy=(media_repr_1.get_x() + 0.1, media_repr_1.get_y() + 0.2), color='black')
+        if mat.model=='Lorentz':
+            s = r'$\epsilon(\omega)$' + '\n' + r'$\sigma$={0:.2f}'.format(mat.conductivity)
+        else:
+            s = r'$\epsilon_r$={0:.2f}'.format(mat.eps) + '\n' + r'$\sigma$={0:.2f}'.format(mat.conductivity)
+        axes[1].annotate(s, xy=(media_repr_1.get_x() + 0.1, media_repr_1.get_y() + 0.2), color='black')
     for src in Grid.sources:
         src_repr = Rectangle(xy=(src.position - 0.5, -src.ampl), height=2 * src.ampl, width=1, color='red', alpha=0.3)
         axes[0].add_patch(src_repr)
@@ -50,13 +52,20 @@ def visualize_permittivity(Grid):
     omega = np.arange(1e12, 1e18, 1e12)
     fig, axes = plt.subplots(1, number_of_plots, dpi=100)
 
-    for ax, mat in zip(axes, list):
-        ax.grid(True, linestyle=(0, (1, 5)), color='black', linewidth=1)
-        ax.semilogx(omega, Grid.materials[mat].epsilon_real(omega), label=r'$\epsilon_{real}$')
-        ax.semilogx(omega, Grid.materials[mat].epsilon_imag(omega), label=r'$\epsilon_{imag}$')
-        ax.legend(loc='best')
-        ax.set_xlabel(r'$\omega$')
+    if number_of_plots == 1:
+        axes.grid(True, linestyle=(0, (1, 5)), color='black', linewidth=1)
+        axes.semilogx(omega, Grid.materials[0].epsilon_real(omega), label=r'$\epsilon_{real}$')
+        axes.semilogx(omega, Grid.materials[0].epsilon_imag(omega), label=r'$\epsilon_{imag}$')
+        axes.legend(loc='best')
+        axes.set_xlabel(r'$\omega$')
 
+    else:
+        for ax, mat in zip(axes, list):
+            ax.grid(True, linestyle=(0, (1, 5)), color='black', linewidth=1)
+            ax.semilogx(omega, Grid.materials[mat].epsilon_real(omega), label=r'$\epsilon_{real}$')
+            ax.semilogx(omega, Grid.materials[mat].epsilon_imag(omega), label=r'$\epsilon_{imag}$')
+            ax.legend(loc='best')
+            ax.set_xlabel(r'$\omega$')
     plt.show()
 
 class AnimateTillTimestep(ani.TimedAnimation):
@@ -89,10 +98,12 @@ class AnimateTillTimestep(ani.TimedAnimation):
             media_repr_0 = Rectangle(xy=(mat.position[0] - 0.5, -1.4), height=2.8, width=(mat.position[-1] - mat.position[0] + 1),
                                    color='grey', fill=True, alpha=mat.eps * 0.12)
             self.axes_ani[0].add_patch(media_repr_0)
-            self.axes_ani[0].annotate(
-                s=r'$\epsilon_r$={0:.2f}'.format(mat.eps) + '\n' + r'$\sigma$={0:.2f}'.format(mat.conductivity),
-                xy=(media_repr_0.get_x() + 0.1, media_repr_0.get_y() + 0.2), color='black')
+            if mat.model == 'Lorentz':
+                s = r'$\epsilon(\omega)$' + '\n' + r'$\sigma$={0:.2f}'.format(mat.conductivity)
+            else:
+                s = r'$\epsilon_r$={0:.2f}'.format(mat.eps) + '\n' + r'$\sigma$={0:.2f}'.format(mat.conductivity)
 
+            self.axes_ani[0].annotate(s, xy=(media_repr_0.get_x() + 0.1, media_repr_0.get_y() + 0.2), color='black')
             media_repr_1 = Rectangle(xy=(mat.position[0] - 0.5 , -1.4), height=2.8, width=(mat.position[-1] - mat.position[0] + 1),
                                      color='grey', fill=True, alpha=mat.eps * 0.12)
             self.axes_ani[1].add_patch(media_repr_1)

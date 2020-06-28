@@ -89,9 +89,6 @@ class Grid:
     def cb(self, cell):                            # Taflove convention
         return 1 / (1 + (self.conductivity[cell] * self.dt) / (2 * eps0 * self.eps[cell]))
 
-    def step_P(self, cell):
-        self.P[cell] = self.P[cell] + self.dt * self.J_p[cell]
-
     def step_Ez(self, cell):
         self.Ez[cell] = self.ca(cell) * self.Ez[cell] + self.dt / (eps0 * self.eps[cell]) * self.cb(cell) * (curl_Hy(self.Hy, cell) / self.dx - self.J_p[cell])
 
@@ -102,8 +99,10 @@ class Grid:
     def update(self):
         # note that steps are dependent on object
         # updating polarisation P
-        for index in range(1, self.nx):
-            self.step_P(index)
+        for index in self.all_E_mats:
+            for mat in self.materials:
+                if index in mat.position:
+                    mat.step_P(index)
 
         # saving Ez - boundaries
         for bound in self.boundaries:

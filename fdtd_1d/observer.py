@@ -1,4 +1,5 @@
 from fdtd_1d.utilities import get_amplitude_and_phase
+from werkzeug.utils import cached_property
 
 class ParentObserver:
 

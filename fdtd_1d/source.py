@@ -1,4 +1,5 @@
 import numpy as np
+from werkzeug.utils import cached_property
 from .constants import c0, mu0, eps0
 from .grid import Grid
 
@@ -24,7 +25,7 @@ class GaussianImpulse(ParentSource):
     '''creates a bell-shaped curve'''
     # currently only supports E-Sources
 
-    @property
+    @cached_property
     def sigma(self):
         return self.fwhm / (self.grid.dx * 2.355)       # approximating 2.255 = 2*sqrt(2*ln(2))
 
@@ -59,11 +60,11 @@ class SinusoidalImpulse(ParentSource):
         self.ampl = amplitude
 
 
-    @property
+    @cached_property
     def omega(self):
         return 2*np.pi*c0 / self.lamb
 
-    @property
+    @cached_property
     def period(self):
         return self.lamb / c0
 
@@ -93,15 +94,15 @@ class EnvelopeSinus(ParentSource):
         self.fwhm = fwhm
         self.peak_timestep = peak_timestep
 
-    @property
+    @cached_property
     def sigma(self):
         return self.fwhm / (self.grid.dx * 2.355)  # approximating 2.355 = 2*sqrt(2*ln(2))
 
-    @property
+    @cached_property
     def omega(self):
         return 2 * np.pi * c0 / self.lamb
 
-    @property
+    @cached_property
     def period(self):
         return self.lamb / c0
 
@@ -128,15 +129,15 @@ class ActivatedSinus(ParentSource):
         self.phase = phase_shift
         self.ampl = amplitude
 
-    @property
+    @cached_property
     def carrier_omega(self):
         return 2 * np.pi * c0 / self.carrier_lamb
 
-    @property
+    @cached_property
     def omega(self):
         return 2 * np.pi * c0 / self.lamb
 
-    @property
+    @cached_property
     def period(self):
         return self.lamb / c0
 
