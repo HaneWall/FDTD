@@ -120,15 +120,10 @@ class LorentzMedium(Vacuum):
 
     def epsilon_real(self, omega):
         eps_real = np.real(self.epsilon_complex(omega))
-        #for w_k, gamma_k, chi_1_k in zip(self.w_0, self.gamma, self.chi_1):
-            #eps_real += (chi_1_k * w_k**2 * (w_k**2 - omega**2)) / ((w_k**2 - omega**2)**2 + gamma_k**2 * omega**2)
         return eps_real
 
     def epsilon_imag(self, omega):
         eps_imag = np.imag(self.epsilon_complex(omega))
-        #eps_imag = 0
-        #for w_k, gamma_k, chi_1_k in zip(self.w_0, self.gamma, self.chi_1):
-            #eps_imag += (chi_1_k * w_k**2 * gamma_k * omega) / ((w_k**2 - omega**2)**2 + gamma_k**2 * omega**2)
         return eps_imag
 
     def epsilon_complex(self, omega):
@@ -147,7 +142,7 @@ class LorentzMedium(Vacuum):
         if self.P_k is None:
             self.P_k = np.zeros((self.grid.nx, len(self.chi_1)))
 
-        # first step_P_k for each oscillator
+        # first: step_P_k for each oscillator
         for k in range(len(self.P_k[index])):
             self.step_P_k(index, k)
 

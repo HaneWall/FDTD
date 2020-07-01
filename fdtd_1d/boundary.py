@@ -1,4 +1,5 @@
 from .constants import c0
+from werkzeug.utils import cached_property
 import numpy as np
 
 
@@ -73,11 +74,11 @@ class LeftSideMur(Boundary):
         self.prev_Ez = [0, 0]
         self.prev_Hy = [0, 0]
 
-    @property
+    @cached_property
     def c_mat(self):
         return c0 / np.sqrt(self.grid.eps[self.position] * self.grid.mu[self.position])
 
-    @property
+    @cached_property
     def radiation_coeff(self):
         u = self.c_mat * self.grid.dt / self.grid.dx
         return (u - 1) / (u + 1)
@@ -110,11 +111,11 @@ class RightSideMur(Boundary):
         self.prev_Ez = [0, 0]
         self.prev_Hy = [0, 0]
 
-    @property
+    @cached_property
     def c_mat(self):
         return c0 / np.sqrt(self.grid.eps[self.position] * self.grid.mu[self.position])
 
-    @property
+    @cached_property
     def radiation_coeff(self):
         u = self.c_mat * self.grid.dt / self.grid.dx
         return (u - 1) / (u + 1)
