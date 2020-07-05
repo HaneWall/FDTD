@@ -77,7 +77,7 @@ class NonDispersiveMedia(Vacuum):
 
 class LorentzMedium(Vacuum):
     ''' electron cloud behaves like one or multiple harmonic oscillator '''
-    # Todo: implement chi in such a way, that you can decribe chi_n -> variable E_vec length
+    # Todo: implement chi in such a way, that you can decribe chi_n -> variable E_vec length (inf order)
 
     def __init__(self, name, permeability, conductivity, eps_inf, gamma, w0, chi_1, chi_2, chi_3):
         super().__init__()

@@ -19,6 +19,12 @@ class ParentObserver:
         elif isinstance(index, slice):
             raise KeyError('Not supporting slicing for observer!')
 
+    def save_Ez(self):
+        pass
+
+    def save_P(self):
+        pass
+
 # differentiate between quasi harmonic situations (2 points required - minimal memory usage) e.g. ramped up signal / ONE frequency
 # and fft (array for one wavelength) e.g. wave packages
 
@@ -58,9 +64,9 @@ class QuasiHarmonicObserver(ParentObserver):
         elif self.grid.timesteps_passed == self.second_timestep:
             self.observedE.append(self.grid.Ez[self.position])
 
-class FFTObserver(ParentObserver):
+class E_FFTObserver(ParentObserver):
     '''
-    stores an array of E at an position from timestep1 to timestep2
+    stores an array of E at specific position from timestep1 to timestep2
     '''
 
     def __init__(self, name, first_timestep, second_timestep):
@@ -80,18 +86,54 @@ class FFTObserver(ParentObserver):
         self.Ez_fft = np.fft.fft(self.observed_E)
         return self.Ez_fft
 
+    # saving Ez in order to fft
+    def save_Ez(self):
+        if self.grid.timesteps_passed in range(self.first_timestep, self.second_timestep + 1):
+            self.observed_E.append(self.grid.Ez[self.position])
+
     # store Ez and Ez_fft in order to analyze data wo computing simulation again
     def store_Ez_data(self, filename):
         filepath_0 = os.path.join(os.path.dirname(__file__), 'saved_data')
         filepath_1 = os.path.join(filepath_0, filename)
         with open(filepath_1, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
+            writer.writerow(['dt', self.grid.dt, 'timestep_duration', self.timestep_duration])
             writer.writerow(self.observed_E)
             writer.writerow(self.Ez_fft)
 
-    # saving Ez in order to fft
-    def save_Ez(self):
+
+
+class P_FFTObserver(ParentObserver):
+    '''
+    stores an array of P at specific position from timestep1 to timestep2
+    '''
+
+    def __init__(self, name, first_timestep, second_timestep):
+        super().__init__()
+        self.observer_name = name
+        self.first_timestep = first_timestep
+        self.second_timestep = second_timestep
+        self.observed_P = []
+        self.P_fft = []
+
+    @cached_property
+    def timestep_duration(self):
+        return self.second_timestep - self.first_timestep
+
+    @cached_property
+    def fft(self):
+        self.P_fft = np.fft.fft(self.observed_P)
+        return self.P_fft
+
+    def save_P(self):
         if self.grid.timesteps_passed in range(self.first_timestep, self.second_timestep + 1):
-            self.observed_E.append(self.grid.Ez[self.position])
-        else:
-            pass
+            self.observed_P.append(self.grid.P[self.position])
+
+    def store_P_data(self, filename):
+        filepath_0 = os.path.join(os.path.dirname(__file__), 'saved_data')
+        filepath_1 = os.path.join(filepath_0, filename)
+        with open(filepath_1, 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(['dt', self.grid.dt, 'timestep_duration', self.timestep_duration])
+            writer.writerow(self.observed_P)
+            writer.writerow(self.P_fft)

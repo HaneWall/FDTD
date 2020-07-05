@@ -3,7 +3,7 @@ import pandas as pd
 
 from .constants import c0, eps0, mu0
 from .visuals import visualize, AnimateTillTimestep, visualize_permittivity, visualize_fft
-from .observer import QuasiHarmonicObserver, FFTObserver
+from .observer import QuasiHarmonicObserver, E_FFTObserver, P_FFTObserver
 
 
 def curl_Ez(field, cell):
@@ -76,10 +76,12 @@ class Grid:
     def visualize_fft_observed(self):
         visualize_fft(self)
 
-    def store_Ez_Data(self):
+    def store_obs_data(self):
         for obs in self.local_observers:
-            if isinstance(obs, FFTObserver):
+            if isinstance(obs, E_FFTObserver):
                 obs.store_Ez_data(filename=obs.observer_name + '.csv')
+            elif isinstance(obs, P_FFTObserver):
+                obs.store_P_data(filename=obs.observer_name + '.csv')
 
     def get_observed_signals(self):
         dict = {'name': [], 'position': [], 'first timestep': [], 'second timestep': [], 'amplitude': [], 'phase': []}
@@ -156,6 +158,7 @@ class Grid:
         # saving local points in order to extract phase and amplitude data
         for observer in self.local_observers:
             observer.save_Ez()
+            observer.save_P()
 
 
 
