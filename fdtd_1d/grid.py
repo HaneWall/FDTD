@@ -1,7 +1,10 @@
-from .constants import c0, eps0, mu0
 import numpy as np
 import pandas as pd
-from .visuals import visualize, AnimateTillTimestep, visualize_permittivity
+
+from .constants import c0, eps0, mu0
+from .visuals import visualize, AnimateTillTimestep, visualize_permittivity, visualize_fft
+from .observer import QuasiHarmonicObserver, FFTObserver
+
 
 def curl_Ez(field, cell):
     return field[cell + 1] - field[cell]
@@ -69,6 +72,14 @@ class Grid:
 
     def visualize_permittivity(self):
         visualize_permittivity(self)
+
+    def visualize_fft_observed(self):
+        visualize_fft(self)
+
+    def store_Ez_Data(self):
+        for obs in self.local_observers:
+            if isinstance(obs, FFTObserver):
+                obs.store_Ez_data(filename=obs.observer_name + '.csv')
 
     def get_observed_signals(self):
         dict = {'name': [], 'position': [], 'first timestep': [], 'second timestep': [], 'amplitude': [], 'phase': []}

@@ -1,4 +1,7 @@
 from fdtd_1d.utilities import get_amplitude_and_phase
+import numpy as np
+import csv
+import os.path
 from werkzeug.utils import cached_property
 
 class ParentObserver:
@@ -20,9 +23,11 @@ class ParentObserver:
 # and fft (array for one wavelength) e.g. wave packages
 
 class QuasiHarmonicObserver(ParentObserver):
-    '''ramping up SinusoidalImpulse via ActivatedSinus -> waiting for steadystate
+    '''
+    ramping up SinusoidalImpulse via ActivatedSinus -> waiting for steadystate
         -> save two points at the observers positions in time domain with T/4 away from each other -> reconstruct sinusoidal in time domain
-        -> get Amplitude + Phase with amplitude > 0 and based on A cos (omega * t + phi)'''
+        -> get Amplitude + Phase with amplitude > 0 and based on A cos (omega * t + phi)
+    '''
 
 # Note that phase and amplitude information is based on A*cos(wt + phi)
 
@@ -52,3 +57,41 @@ class QuasiHarmonicObserver(ParentObserver):
 
         elif self.grid.timesteps_passed == self.second_timestep:
             self.observedE.append(self.grid.Ez[self.position])
+
+class FFTObserver(ParentObserver):
+    '''
+    stores an array of E at an position from timestep1 to timestep2
+    '''
+
+    def __init__(self, name, first_timestep, second_timestep):
+        super().__init__()
+        self.observer_name = name
+        self.first_timestep = first_timestep
+        self.second_timestep = second_timestep
+        self.observed_E = []
+        self.Ez_fft = []
+
+    @cached_property
+    def timestep_duration(self):
+        return self.second_timestep - self.first_timestep
+
+    @cached_property
+    def fft(self):
+        self.Ez_fft = np.fft.fft(self.observed_E)
+        return self.Ez_fft
+
+    # store Ez and Ez_fft in order to analyze data wo computing simulation again
+    def store_Ez_data(self, filename):
+        filepath_0 = os.path.join(os.path.dirname(__file__), 'saved_data')
+        filepath_1 = os.path.join(filepath_0, filename)
+        with open(filepath_1, 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(self.observed_E)
+            writer.writerow(self.Ez_fft)
+
+    # saving Ez in order to fft
+    def save_Ez(self):
+        if self.grid.timesteps_passed in range(self.first_timestep, self.second_timestep + 1):
+            self.observed_E.append(self.grid.Ez[self.position])
+        else:
+            pass
