@@ -1,6 +1,6 @@
 import fdtd_1d as f
 
-'''
+
 # Load setup/benchmark:
 #setup = f.Harmonic_Slab_Setup(dx=4.e-09, length_grid_in_dx=40, length_media_in_dx=30, start_index_media=5, wavelength=240.e-09, epsilon=4, ampl=1, timesteps=2000)
 #setup.run_benchmark()
@@ -32,21 +32,21 @@ test[2574:3425] = f.LorentzMedium(name='Varin', permeability=1, eps_inf=1.05, ch
 #test[15] = f.ActivatedSinus(name='sin**2activation', wavelength=200e-09, carrier_wavelength=1000.0e-09, phase_shift=0, amplitude=1, tfsf=True)
 #test[10] = f.ActivatedSinus(name='sin**2activation', wavelength=1.064e-06, carrier_wavelength=20*1.064e-06, phase_shift=0, amplitude=1, tfsf=True)
 #test[15] = f.SinusoidalImpulse(name='test', amplitude=1, phase_shift=0, wavelength=1000, tfsf=True)
-test[15] = f.EnvelopeSinus(name='test', wavelength=1.064e-06, fwhm=14.6e-06, amplitude=2.74492e7, phase_shift=0, peak_timestep=3000, tfsf=True)
+test[15] = f.EnvelopeSinus(name='test', wavelength=1.064e-06, fwhm=14.6e-06, amplitude=2*2.74492e7, phase_shift=0, peak_timestep=9000, tfsf=False)
 #test[10] = f.GaussianImpulse(name='test', amplitude=1, peak_timestep=100, fwhm=60e-09, tfsf=True)
     
 # Step 4: add observer
 #test[280] = f.QuasiHarmonicObserver(name='firstobserver', first_timestep=2000)
 #test[10] = f.QuasiHarmonicObserver(name='firstobserver', first_timestep=2000)
 #test[5] = f.E_FFTObserver(name='scndAttempt', first_timestep=0, second_timestep=10000)
-test[3430] = f.E_FFTObserver(name='E_two_lambda', first_timestep=0, second_timestep=60000)
-test[3420] = f.P_FFTObserver(name='P_two_lambda', first_timestep=0, second_timestep=60000)
+test[3430] = f.E_FFTObserver(name='E_two_lambda_laterpeak_tfsf_false', first_timestep=0, second_timestep=70000)
+test[3420] = f.P_FFTObserver(name='P_two_lambda_laterpeak_tfsf_false', first_timestep=0, second_timestep=70000)
 # Step 5: add boundaries
 test[0] = f.LeftSideMur()
 test[3449] = f.RightSideMur()
     
 # Step 6: run simulation
-test.run_timesteps(timesteps=60000)
+test.run_timesteps(timesteps=70000)
 #test.animate_timesteps(60000)
 
 # Step 7: misc
@@ -55,4 +55,4 @@ test.run_timesteps(timesteps=60000)
 test.visualize_fft_observed()
 test.store_obs_data()
 
-
+'''

@@ -6,7 +6,7 @@ import pandas as pd
 
 #def convert_to_float(data):
 
-df1 = pd.read_csv("./fdtd_1d/saved_data/P_one_lambda.csv", skiprows=[0], sep=',', header=None)
+df1 = pd.read_csv("./fdtd_1d/saved_data/P_two_lambda_laterpeak.csv", skiprows=[0], sep=',', header=None)
 df1 = df1.T
 P = np.array(df1[0])
 
