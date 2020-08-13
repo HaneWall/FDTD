@@ -1,7 +1,7 @@
 import numpy as np
 import fdtd_1d as f
 import matplotlib.pyplot as plt
-from .constants import c0
+from .constants import c0, BLUE, CYAN, TEAL, ORANGE, RED, MAGENTA, GREY
 
 # Implementation of a dielectric slab
 def theory_dielectric_slab_complex(grid):
@@ -15,7 +15,7 @@ def theory_dielectric_slab_complex(grid):
     q = ((n - 1) ** 2) / ((n + 1) ** 2) * np.exp(2j * k * d)
     e_inc = grid.sources[0].ampl
     e_tr = e_inc * (2 / (n + 1)) * (2 * n / (n + 1)) * (1 / (1 - q)) * np.exp(1j * (k - k0) * d)
-    theo_amplitude = np.abs(e_tr)
+    theo_amplitude = 1/grid.courant * np.abs(e_tr)
     theo_phasenunterschied = np.angle(e_tr)
     return theo_amplitude, theo_phasenunterschied
 
@@ -275,8 +275,14 @@ class Harmonic_Slab_Lorentz_Setup:
         wo_grid = f.Grid(self.Nx, dx=self.dx)
         wo_grid[position_src] = f.ActivatedSinus(name='SinsquaredActivated', wavelength=self.lamb, carrier_wavelength=(self.lamb * 30), phase_shift=0, amplitude=self.ampl, tfsf=True)
         wo_grid[position_obs] = f.QuasiHarmonicObserver(name='firstobserver', first_timestep=self.timesteps-200)
-        wo_grid[0] = f.LeftSideMur()
-        wo_grid[end_mur] = f.RightSideMur()
+
+        if wo_grid.courant == 0.5:
+            wo_grid[0] = f.LeftSideGridBoundary()
+            wo_grid[end_mur] = f.RightSideGridBoundary()
+        else:
+            wo_grid[0] = f.LeftSideMur()
+            wo_grid[end_mur] = f.RightSideMur()
+
         wo_grid.run_timesteps(self.timesteps, vis=False)
         self.wo_phase.append(wo_grid.local_observers[0].phase)
 
@@ -299,8 +305,12 @@ class Harmonic_Slab_Lorentz_Setup:
             w_grid[position_obs] = f.QuasiHarmonicObserver(name='firstobserver', first_timestep=self.timesteps-200)
 
             # Step 5: add boundaries
-            w_grid[0] = f.LeftSideMur()
-            w_grid[end_mur] = f.RightSideMur()
+            if w_grid.courant == 0.5:
+                w_grid[0] = f.LeftSideGridBoundary()
+                w_grid[end_mur] = f.RightSideGridBoundary()
+            else:
+                w_grid[0] = f.LeftSideMur()
+                w_grid[end_mur] = f.RightSideMur()
 
             # Step 6: run simulation
             w_grid.run_timesteps(timesteps=self.timesteps, vis=False)
@@ -321,35 +331,48 @@ class Harmonic_Slab_Lorentz_Setup:
     def _visualize(self):
         fig, axes = plt.subplots(2, 2)
         fig.suptitle(r'$n_{real}=$'+'{0:.3}'.format(self.n_real[0]) + r'     $N_{\lambda_{media}}=$' + '{0:.3}'.format(self.lamb/(self.dx*self.n_real[0])), fontsize=20)
-        axes[0][0].plot(np.array(self.indices) - self.start_media, np.array(self.theo_amplitude), label='theorie', color='blue', marker='o', alpha=0.5)
-        axes[0][0].grid(True, linestyle=(0, (1, 5)), color='black', linewidth=1)
-        axes[0][0].plot(np.array(self.indices) - self.start_media, np.array(self.exp_amplitude), label='FDTD', linestyle='dashed', color='red', marker='s', alpha=0.5)
+        axes[0][0].plot(np.array(self.indices) - self.start_media, np.array(self.theo_amplitude), label='theorie', color=ORANGE, marker='o', alpha=1)
+        axes[0][0].grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
+        axes[0][0].plot(np.array(self.indices) - self.start_media, np.array(self.exp_amplitude), label='FDTD', linestyle='dashed', color=TEAL, marker='s', alpha=1)
         axes[0][0].legend(loc='best')
         axes[0][0].set_xlabel('Breite des Mediums in ' + r'$\Delta_x$', fontsize=14)
         axes[0][0].set_ylabel('Transmittierte Amplitude ' + r'$Ez_{tr}$', fontsize=14)
         axes[0][0].set_xlim([0, self.length_media + 1])
-        axes[0][1].plot(np.array(self.indices) - self.start_media, np.array(self.theo_amplitude) / np.array(self.exp_amplitude), color='black')
+        axes[0][1].plot(np.array(self.indices) - self.start_media, np.array(self.theo_amplitude) / np.array(self.exp_amplitude), color=TEAL)
         axes[0][1].set_ylabel(r'$E_{tr,theo}$ / $E_{tr,FDTD}$', fontsize=14)
         axes[0][1].set_xlabel('Breite des Mediums in ' + r'$\Delta_x$', fontsize=14)
-        axes[0][1].grid(True, linestyle=(0, (1, 5)), color='black', linewidth=1)
+        axes[0][1].grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
         axes[0][1].set_xlim([0, self.length_media + 1])
         axes[1][0].set_ylabel('Phasenunterschied', fontsize=14)
-        axes[1][0].plot(np.array(self.indices) - self.start_media, self.theo_phasenunterschied, label='theorie', color='blue', alpha=0.5)
+        axes[1][0].plot(np.array(self.indices) - self.start_media, self.theo_phasenunterschied, label='theorie', color=ORANGE, alpha=1)
         axes[1][0].set_xlabel('Breite des Mediums in ' + r'$\Delta_x$', fontsize=14)
-        axes[1][0].grid(True, linestyle=(0, (1, 5)), color='black', linewidth=1)
-        axes[1][0].plot(np.array(self.indices) - self.start_media, -np.array(self.exp_phase) + self.wo_phase, color='red', linestyle='dashed',
-                        label='FDTD', alpha=0.5)
+        axes[1][0].grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
+        axes[1][0].plot(np.array(self.indices) - self.start_media, self.get_exp_phasedifference(), color=TEAL, linestyle='dashed',
+                        label='FDTD', alpha=1)
         axes[1][0].set_xlim([0, self.length_media + 1])
         axes[1][0].legend()
         axes[1][1].set_xlabel('Breite des Mediums in ' + r'$\Delta_x$', fontsize=14)
         axes[1][1].set_ylabel(r'$d(\phi_{exp},\phi_{theo})$', fontsize=14)
         axes[1][1].plot(np.array(self.indices) - self.start_media,
-                        np.abs(-np.array(self.exp_phase) + self.wo_phase - np.array(self.theo_phasenunterschied)), color='black')
-        axes[1][1].grid(True, linestyle=(0, (1, 5)), color='black', linewidth=1)
+                        np.abs(self.get_exp_phasedifference() - np.array(self.theo_phasenunterschied)), color=TEAL)
+        axes[1][1].grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
         axes[1][1].set_xlim([0, self.length_media + 1])
         plt.show()
+
+    def get_exp_phasedifference(self):
+        phase_diff = -np.array(self.exp_phase) + self.wo_phase
+        for index in range(len(phase_diff)):
+            if phase_diff[index] > np.pi:
+                phase_diff[index] -= 2*np.pi
+        return phase_diff
 
     def run_benchmark(self):
         self._grid_wo_slab()
         self._grids_w_slab()
         self._visualize()
+
+class QuasiPhaseMatching:
+    ''' reproduces paper QuasiPhaseMatching from Varin's Paper '''
+
+    def __init__(self, number_of_lambda, timesteps):
+        self.lambda_qpm = number_of_lambda

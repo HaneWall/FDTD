@@ -20,7 +20,7 @@ class Case:
     def _set_raw_data(self):
         df = pd.read_csv(self.path, skiprows=[0], sep=',', header=None)
         df = df.T
-        self.raw_data = np.array(df[0], float)
+        self.raw_data = np.array(df[0], float)[0:30000]
 
     def _recreate_fft(self, zero_pad=0):
         df = pd.read_csv(self.path, sep=',', header=None, nrows=1)
@@ -51,8 +51,8 @@ axes.plot(P, color=ORANGE)
 plt.show()
 '''
 Case0 = Case('just_testing_2.csv', zero_paddling=80000)
-Case1 = Case('P_two_lambda_laterpeak_13000_737.csv', zero_paddling=130000)
-Case2 = Case('E_two_lambda_laterpeak_13000_737.csv', zero_paddling=130000)
+Case1 = Case('P_two_lambda_laterpeak_16000_737.csv', zero_paddling=130000)
+Case2 = Case('E_two_lambda_laterpeak_16000_737.csv', zero_paddling=130000)
 
 fig, axes = plt.subplots(2, 2)
 #axes[0][0].plot(Case1.omega, Case1.abs_fft, color=TEAL)

@@ -25,7 +25,7 @@ class Grid:
         self.Hy = np.zeros(nx)
         self.J_p = np.zeros(nx)
         self.P = np.zeros(nx)
-        self.courant = 1                   # 1 = magic time step ( Taflove - numerical error is minimal )
+        self.courant = 0.5                   # 1 = magic time step ( Taflove - numerical error is minimal )
         self.dt = dx * self.courant / c0
         self.timesteps = None
         self.timesteps_passed = 0
