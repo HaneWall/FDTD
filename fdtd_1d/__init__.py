@@ -5,4 +5,4 @@ from .boundary import Boundary, LeftSideGridBoundary, RightSideGridBoundary, Lef
 from .visuals import visualize, AnimateTillTimestep, visualize_permittivity
 from .observer import ParentObserver, QuasiHarmonicObserver, E_FFTObserver, P_FFTObserver
 from .utilities import get_amplitude_and_phase
-from .benchmarks import Harmonic_Slab_Setup, TiO2_Si02_Dielectric_Mirror_Setup, Harmonic_Slab_Lorentz_Setup
+from .benchmarks import Harmonic_Slab_Setup, TiO2_Si02_Dielectric_Mirror_Setup, Harmonic_Slab_Lorentz_Setup, Quasi_Phase_Matching

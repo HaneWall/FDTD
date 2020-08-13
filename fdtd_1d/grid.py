@@ -15,7 +15,7 @@ def curl_Hy(field, cell):
 
 class Grid:
 
-    def __init__(self, nx, dx):
+    def __init__(self, nx, dx, courant=1):
         self.mu = np.ones(nx)               # permeability - free space / vacuum
         self.eps = np.ones(nx)              # permittivity - free space / vacuum
         self.conductivity = np.zeros(nx)
@@ -25,8 +25,8 @@ class Grid:
         self.Hy = np.zeros(nx)
         self.J_p = np.zeros(nx)
         self.P = np.zeros(nx)
-        self.courant = 0.5                   # 1 = magic time step ( Taflove - numerical error is minimal )
-        self.dt = dx * self.courant / c0
+        self.courant = courant                  # 1 = magic time step ( Taflove - numerical error is minimal )
+        self.dt = dx * courant / c0
         self.timesteps = None
         self.timesteps_passed = 0
         self.all_E_mats = set()
