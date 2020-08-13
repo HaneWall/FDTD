@@ -52,13 +52,15 @@ class RightSideGridBoundary(Boundary):
         self.arr_Hy = [0]
 
     def save_Ez(self):
-        self.arr_Ez.append(self.grid.E[self.position - 1])
+        pass
+        #self.arr_Ez.append(self.grid.E[self.position - 1])
 
     def save_Hy(self):
         self.arr_Hy.append(self.grid.B[self.position - 1])
 
     def step_Ez(self):
-        self.grid.Ez[self.position] = self.arr_Ez.pop(0)
+        pass
+        #self.grid.Ez[self.position] = self.arr_Ez.pop(0)
 
     def step_Hy(self):
         self.grid.Hy[self.position] = self.arr_Hy.pop(0)

@@ -96,7 +96,7 @@ class EnvelopeSinus(ParentSource):
 
     @cached_property
     def sigma(self):
-        return self.fwhm / (self.grid.dx * 2.355)  # approximating 2.355 = 2*sqrt(2*ln(2))
+        return self.fwhm / (self.grid.dx * 2*np.sqrt(2*np.log(2)))  # approximating 2.355 = 2*sqrt(2*ln(2))
 
     @cached_property
     def omega(self):
