@@ -8,10 +8,10 @@ import fdtd_1d as f
 #setup_3 = f.Harmonic_Slab_Lorentz_Setup(dx=4/6 * 3.91e-07, length_grid_in_dx=50, length_media_in_dx=30, start_index_media=5, wavelength=1.75e-05, eps_inf=1.5, chi_1=[5.1], chi_2=[0], chi_3=[0], conductivity=0, w0=[1.2566e14], gamma=[8e12], ampl=1, timesteps=4000)
 #setup_3 = f.Harmonic_Slab_Lorentz_Setup(dx=3/6 * 3.91e-07, length_grid_in_dx=50, length_media_in_dx=30, start_index_media=5, wavelength=1.75e-05, eps_inf=1.0, chi_1=[2.1, 2.4], chi_2=[0, 0], chi_3=[0, 0], conductivity=0, w0=[1.2566e14, 1.2e13], gamma=[8e12, 9e14], ampl=1, timesteps=6000, courant=0.5)
 #setup_3.run_benchmark()
-setup_4 = f.Quasi_Phase_Matching(number_of_lambdas=1, timesteps=500, courant=0.5, name='testing_benchmark_obj', peak_timestep=15000)
+setup_4 = f.Quasi_Phase_Matching(number_of_lambdas=1, timesteps=110000, courant=0.5, name='one_lambda_110000_courant_05_timestep_peak_20000', peak_timestep=20000)
 setup_4.run_benchmark()
-'''
 
+'''
 # Or build your own setup
 
 # Step 1: init grid

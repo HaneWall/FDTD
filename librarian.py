@@ -6,7 +6,7 @@ from fdtd_1d.constants import BLUE, CYAN, TEAL, ORANGE, RED, MAGENTA, GREY
 class Case:
     ''' creates a bunch of informations about the file of interest in "saved_data" '''
 
-    def __init__(self, filename, zero_paddling):
+    def __init__(self, filename, zero_padding=0):
         self.path = "./fdtd_1d/saved_data/"+filename
         self.raw_data = None
         self.abs_fft = None
@@ -15,12 +15,13 @@ class Case:
         self.normalized_abs_fft = None
         self.normalized_abs_fft_sqrd = None
         self._set_raw_data()
-        self._recreate_fft(zero_pad=zero_paddling)
+        self.zero_padding = zero_padding
+        self._recreate_fft(zero_pad=zero_padding)
 
     def _set_raw_data(self):
         df = pd.read_csv(self.path, skiprows=[0], sep=',', header=None)
         df = df.T
-        self.raw_data = np.array(df[0], float)[0:30000]
+        self.raw_data = np.array(df[0], float)
 
     def _recreate_fft(self, zero_pad=0):
         df = pd.read_csv(self.path, sep=',', header=None, nrows=1)
@@ -37,22 +38,9 @@ class Case:
         self.normalized_abs_fft_sqrd = self.abs_fft_sqrd/abs_fft_sqrd_max
 
 
-#def recreate_fft(data):
-
-#def convert_to_float(data):
-'''
-df1 = pd.read_csv("./fdtd_1d/saved_data/E_two_lambda_laterpeak.csv", skiprows=[0], sep=',', header=None)
-df1 = df1.T
-P = np.array(df1[1], float)
-
-
-fig, axes = plt.subplots()
-axes.plot(P, color=ORANGE)
-plt.show()
-'''
-Case0 = Case('just_testing_2.csv', zero_paddling=80000)
-Case1 = Case('P_two_lambda_laterpeak_16000_737.csv', zero_paddling=130000)
-Case2 = Case('E_two_lambda_laterpeak_16000_737.csv', zero_paddling=130000)
+Case0 = Case('P_testing_benchmark_obj.csv', zero_padding=80000)
+Case1 = Case('E_one_lambda_80000_courant_05_timestep_peak_20000.csv', zero_padding=100000)
+Case2 = Case('E_one_lambda_110000_courant_05_timestep_peak_20000.csv', zero_padding=100000)
 
 fig, axes = plt.subplots(2, 2)
 #axes[0][0].plot(Case1.omega, Case1.abs_fft, color=TEAL)

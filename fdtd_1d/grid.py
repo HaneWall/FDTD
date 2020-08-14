@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 
+from numba import jit
 from .constants import c0, eps0, mu0
 from .visuals import visualize, AnimateTillTimestep, visualize_permittivity, visualize_fft
 from .observer import QuasiHarmonicObserver, E_FFTObserver, P_FFTObserver

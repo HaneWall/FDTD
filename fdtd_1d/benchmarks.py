@@ -389,7 +389,7 @@ class Harmonic_Slab_Lorentz_Setup:
 class Quasi_Phase_Matching:
     ''' reproduces paper QuasiPhaseMatching from Varin's Paper '''
 
-    def __init__(self, number_of_lambdas, timesteps, courant, name, peak_timestep):
+    def __init__(self, number_of_lambdas, timesteps, courant, name, peak_timestep, mode='scnd_harmonic'):
         self.lambda_qpm = number_of_lambdas
         self.half_qpm = 737
         self.dx = 4e-09
@@ -400,6 +400,7 @@ class Quasi_Phase_Matching:
         self.start_media = 5
         self.ending_indices = [self.start_media + i*737 for i in range(self.lambda_qpm*2 + 1)]
         self.peak_timestep = peak_timestep
+        self.mode=mode
 
     def _create_grid(self):
         position_src = 5
