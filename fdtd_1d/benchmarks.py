@@ -389,7 +389,7 @@ class Harmonic_Slab_Lorentz_Setup:
 class Quasi_Phase_Matching:
     ''' reproduces paper QuasiPhaseMatching from Varin's Paper '''
 
-    def __init__(self, number_of_lambdas, timesteps, courant, name, peak_timestep, mode='scnd_harmonic'):
+    def __init__(self, number_of_lambdas, timesteps, courant, name, peak_timestep, mode='qpm_harmonic'):
         self.lambda_qpm = number_of_lambdas
         self.half_qpm = 737
         self.dx = 4e-09
@@ -400,22 +400,39 @@ class Quasi_Phase_Matching:
         self.start_media = 5
         self.ending_indices = [self.start_media + i*737 for i in range(self.lambda_qpm*2 + 1)]
         self.peak_timestep = peak_timestep
-        self.mode=mode
+        self.mode = mode
 
     def _create_grid(self):
-        position_src = 5
         position_P_obs = self.nx - 7
         position_E_obs = self.nx - 3
 
         # step 1: init grid
-        qpm_grid = f.Grid(nx=self.nx, courant=self.courant, dx=self.dx)
+        qpm_grid = f.Grid(nx=self.nx, courant=self.courant, dx=self.dx, benchmark='qpm_harmonic')
 
         # step 2: init media
         for indices in range(len(self.ending_indices) - 1):
             if indices % 2 == 0:
-                qpm_grid[self.ending_indices[indices]:self.ending_indices[indices + 1]] = f.LorentzMedium(name='Varin', permeability=1, eps_inf=1.00, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0], chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
+                if self.courant < 1:
+                    # eps_inf  = 1 is stable
+
+                    qpm_grid[self.ending_indices[indices]:self.ending_indices[indices + 1]] = f.LorentzMedium(
+                        name='Varin', permeability=1, eps_inf=1.00, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0],
+                        chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
+                else:
+                    qpm_grid[self.ending_indices[indices]:self.ending_indices[indices + 1]] = f.LorentzMedium(
+                        name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0],
+                        chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
             else:
-                qpm_grid[self.ending_indices[indices]:self.ending_indices[indices + 1]] = f.LorentzMedium(name='Varin', permeability=1, eps_inf=1.00, chi_1=[2.42, 9.65, 1.46], chi_2=[-30.e-12, 0, 0], chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
+                if self.courant < 1:
+                    # eps_inf  = 1 is stable
+
+                    qpm_grid[self.ending_indices[indices]:self.ending_indices[indices + 1]] = f.LorentzMedium(
+                        name='Varin', permeability=1, eps_inf=1.00, chi_1=[2.42, 9.65, 1.46], chi_2=[-30.e-12, 0, 0],
+                        chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
+                else:
+                    qpm_grid[self.ending_indices[indices]:self.ending_indices[indices + 1]] = f.LorentzMedium(
+                        name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[-30.e-12, 0, 0],
+                        chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
 
         # step 3: init src
         if self.courant == 1:
@@ -443,5 +460,70 @@ class Quasi_Phase_Matching:
         # step 7: misc
         qpm_grid.store_obs_data()
 
+    def _create_grid_dis_obs(self):
+        obs_distance = (self.nx - 10)//50   # 50 distributed observer
+        obs_positions = np.arange(start=5, stop=self.nx-6, step=obs_distance)
+        print(obs_positions)
+        # step 1: init grid
+        qpm_grid = f.Grid(nx=self.nx, courant=self.courant, dx=self.dx, benchmark='qpm_harmonic_length')
+
+        # step 2: init media
+        for indices in range(len(self.ending_indices) - 1):
+            if indices % 2 == 0:
+                if self.courant < 1:
+                    # eps_inf  = 1 is stable
+
+                    qpm_grid[self.ending_indices[indices]:self.ending_indices[indices + 1]] = f.LorentzMedium(
+                        name='Varin', permeability=1, eps_inf=1.00, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0],
+                        chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
+                else:
+                    qpm_grid[self.ending_indices[indices]:self.ending_indices[indices + 1]] = f.LorentzMedium(
+                        name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0],
+                        chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
+            else:
+                if self.courant < 1:
+                    # eps_inf  = 1 is stable
+
+                    qpm_grid[self.ending_indices[indices]:self.ending_indices[indices + 1]] = f.LorentzMedium(
+                        name='Varin', permeability=1, eps_inf=1.00, chi_1=[2.42, 9.65, 1.46], chi_2=[-30.e-12, 0, 0],
+                        chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
+                else:
+                    qpm_grid[self.ending_indices[indices]:self.ending_indices[indices + 1]] = f.LorentzMedium(
+                        name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[-30.e-12, 0, 0],
+                        chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
+
+        # step 3: init src
+        if self.courant == 1:
+            qpm_grid[3] = f.EnvelopeSinus(name='test', wavelength=1.064e-06, fwhm=14.6e-06, amplitude=2.74492e7,
+                                       phase_shift=0, peak_timestep=self.peak_timestep, tfsf=True)
+        else:
+            qpm_grid[3] = f.EnvelopeSinus(name='test', wavelength=1.064e-06, fwhm=14.6e-06, amplitude=2.74492e7,
+                                          phase_shift=0, peak_timestep=self.peak_timestep, tfsf=False)
+        # step 4: add obs
+        for pos in obs_positions:
+            qpm_grid[int(pos)] = f.E_FFTObserver(name='E_'+str(pos)+'_'+self.name, first_timestep=0, second_timestep=self.timesteps-1)
+
+        # step 5: add boundary
+        if qpm_grid.courant == 0.5:
+            qpm_grid[0] = f.LeftSideGridBoundary()
+            qpm_grid[self.nx - 1] = f.RightSideGridBoundary()
+        else:
+            qpm_grid[0] = f.LeftSideMur()
+            qpm_grid[self.nx - 1] = f.RightSideMur()
+
+        # step 6: run simulation
+        qpm_grid.run_timesteps(timesteps=self.timesteps, vis=True)
+
+        # step 7: misc
+        qpm_grid.store_obs_data()
+
+
     def run_benchmark(self):
-        self._create_grid()
+        if self.mode == 'qpm_harmonic':
+            self._create_grid()
+
+        else:
+            self._create_grid_dis_obs()
+
+
+

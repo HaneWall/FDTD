@@ -91,15 +91,20 @@ class E_FFTObserver(ParentObserver):
         if self.grid.timesteps_passed in range(self.first_timestep, self.second_timestep + 1):
             self.observed_E.append(self.grid.Ez[self.position])
 
-    # store Ez and Ez_fft in order to analyze data wo computing simulation again
+    # store Ez (and Ez_fft) in order to analyze data wo computing simulation again
     def store_Ez_data(self, filename):
-        filepath_0 = os.path.join(os.path.dirname(__file__), 'saved_data')
+        if self.grid.benchmark_type is None:
+            filepath_0 = os.path.join(os.path.dirname(__file__), 'saved_data')
+
+        else:
+            filepath_0 = os.path.join(os.path.dirname(__file__), 'saved_data/'+self.grid.benchmark_type)
+
         filepath_1 = os.path.join(filepath_0, filename)
         with open(filepath_1, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(['dt', self.grid.dt, 'timestep_duration', self.timestep_duration])
             writer.writerow(self.observed_E)
-            writer.writerow(self.Ez_fft)
+            #writer.writerow(self.Ez_fft)
 
 
 
@@ -130,10 +135,15 @@ class P_FFTObserver(ParentObserver):
             self.observed_P.append(self.grid.P[self.position])
 
     def store_P_data(self, filename):
-        filepath_0 = os.path.join(os.path.dirname(__file__), 'saved_data')
+        if self.grid.benchmark_type is None:
+            filepath_0 = os.path.join(os.path.dirname(__file__), 'saved_data')
+
+        else:
+            filepath_0 = os.path.join(os.path.dirname(__file__), 'saved_data/' + self.grid.benchmark_type)
+
         filepath_1 = os.path.join(filepath_0, filename)
         with open(filepath_1, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(['dt', self.grid.dt, 'timestep_duration', self.timestep_duration])
             writer.writerow(self.observed_P)
-            writer.writerow(self.P_fft)
+            #writer.writerow(self.P_fft)

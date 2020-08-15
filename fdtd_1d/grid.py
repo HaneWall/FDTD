@@ -16,7 +16,7 @@ def curl_Hy(field, cell):
 
 class Grid:
 
-    def __init__(self, nx, dx, courant=1):
+    def __init__(self, nx, dx, courant=1, benchmark=None):
         self.mu = np.ones(nx)               # permeability - free space / vacuum
         self.eps = np.ones(nx)              # permittivity - free space / vacuum
         self.conductivity = np.zeros(nx)
@@ -30,11 +30,13 @@ class Grid:
         self.dt = dx * courant / c0
         self.timesteps = None
         self.timesteps_passed = 0
+        self.benchmark_type = benchmark     # some objects have to know which kind of benchmark is processed to work properly
         self.all_E_mats = set()
         self.sources = []                   # saving source.py-objects
         self.materials = []                 # saving material.py-objects
         self.boundaries = []                # saving boundary.py-objects
         self.local_observers = []           # saving time-data of the field
+
 
     @property
     def time_passed(self):
