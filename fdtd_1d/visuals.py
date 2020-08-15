@@ -3,7 +3,9 @@ from matplotlib.lines import Line2D
 import matplotlib.animation as ani
 from matplotlib.patches import Rectangle
 import numpy as np
-from .constants import mu0, eps0
+
+from .observer import QuasiHarmonicObserver, E_FFTObserver, P_FFTObserver
+from .constants import mu0, eps0, c0
 
 
 
@@ -40,7 +42,12 @@ def visualize(Grid):
         axes[0].add_patch(src_repr)
 
     for obs in Grid.local_observers:
-        obs_repr = Rectangle(xy=(obs.position - 0.5, -1.4), height=2.8, width=1, color = 'green', alpha=0.3)
+        if isinstance(obs, QuasiHarmonicObserver):
+            obs_repr = Rectangle(xy=(obs.position - 0.5, -1.4), height=2.8, width=1, color='green', alpha=0.3)
+        elif isinstance(obs, E_FFTObserver):
+            obs_repr = Rectangle(xy=(obs.position - 0.5, -1.4), height=2.8, width=1, color='indigo', alpha=0.3)
+        elif isinstance(obs, P_FFTObserver):
+            obs_repr = Rectangle(xy=(obs.position - 0.5, -1.4), height=2.8, width=1, color='orange', alpha=0.3)
         axes[0].add_patch(obs_repr)
 
     fig.tight_layout()
@@ -66,6 +73,42 @@ def visualize_permittivity(Grid):
             ax.semilogx(omega, Grid.materials[mat].epsilon_imag(omega), label=r'$\epsilon_{imag}$')
             ax.legend(loc='best')
             ax.set_xlabel(r'$\omega$')
+    plt.show()
+
+def visualize_fft(grid):
+    fft_objects = []
+    for elem in grid.local_observers:
+        if isinstance(elem, E_FFTObserver):
+            fft_objects.append(elem)
+        if isinstance(elem, P_FFTObserver):
+            fft_objects.append(elem)
+
+    number_of_plots = len(fft_objects)
+    fig, axes = plt.subplots(1, number_of_plots, dpi=100)
+    list = np.arange(0, number_of_plots, 1)
+
+    if number_of_plots == 1:
+        omega_x = 2*np.pi*np.linspace(0, 1/(2*grid.dt), (fft_objects[0].second_timestep - fft_objects[0].first_timestep)//2)
+        axes.grid(True, linestyle=(0, (1, 5)), color='black', linewidth=1)
+        axes.plot(omega_x, 2/fft_objects[0].timestep_duration * np.abs(fft_objects[0].fft[0:fft_objects[0].timestep_duration//2]), marker='o', alpha=0.8, linestyle='-.')
+        if isinstance(fft_objects[0], E_FFTObserver):
+            axes.set_title(r'$E$' + ' Position {}'.format(fft_objects[0].position))
+        elif isinstance(fft_objects[0], P_FFTObserver):
+            axes.set_title(r'$P$' + ' Position {}'.format(fft_objects[0].position))
+        axes.set_xlabel('Frequenz ' + r'$\omega$')
+        axes.set_ylabel('Amplitude')
+
+    else:
+        for ax, fft_obs in zip(axes, list):
+            omega_x = 2*np.pi*np.linspace(0, 1/(2*grid.dt), fft_objects[fft_obs].timestep_duration//2)
+            ax.grid(True, linestyle=(0, (1, 5)), color='black', linewidth=1)
+            ax.plot(omega_x, 2/fft_objects[fft_obs].timestep_duration * np.abs(fft_objects[fft_obs].fft[0:fft_objects[fft_obs].timestep_duration//2]), marker='o', alpha=0.8, linestyle='-.')
+            if isinstance(fft_obs, E_FFTObserver):
+                ax.set_title(r'$E$'+' Position {}'.format(fft_objects[fft_obs].position))
+            elif isinstance(fft_obs, P_FFTObserver):
+                ax.set_title(r'$P$' + ' Position {}'.format(fft_objects[fft_obs].position))
+            ax.set_xlabel('Frequenz '+r'$\omega$')
+            ax.set_ylabel('Amplitude')
     plt.show()
 
 class AnimateTillTimestep(ani.TimedAnimation):
@@ -114,7 +157,12 @@ class AnimateTillTimestep(ani.TimedAnimation):
             self.axes_ani[0].add_patch(src_repr)
 
         for obs in self.grid.local_observers:
-            obs_repr = Rectangle(xy=(obs.position - 0.5, -1.4), height=2.8, width= 1, color='green', alpha=0.3)
+            if isinstance(obs, QuasiHarmonicObserver):
+                obs_repr = Rectangle(xy=(obs.position - 0.5, -1.4), height=2.8, width=1, color='green', alpha=0.3)
+            elif isinstance(obs, E_FFTObserver):
+                obs_repr = Rectangle(xy=(obs.position - 0.5, -1.4), height=2.8, width=1, color='indigo', alpha=0.3)
+            elif isinstance(obs, P_FFTObserver):
+                obs_repr = Rectangle(xy=(obs.position - 0.5, -1.4), height=2.8, width=1, color='orange', alpha=0.3)
             self.axes_ani[0].add_patch(obs_repr)
 
         ani.TimedAnimation.__init__(self, fig_ani, blit=True, interval=5, repeat=False)

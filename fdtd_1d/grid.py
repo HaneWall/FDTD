@@ -1,7 +1,11 @@
-from .constants import c0, eps0, mu0
 import numpy as np
 import pandas as pd
-from .visuals import visualize, AnimateTillTimestep, visualize_permittivity
+
+from numba import jit
+from .constants import c0, eps0, mu0
+from .visuals import visualize, AnimateTillTimestep, visualize_permittivity, visualize_fft
+from .observer import QuasiHarmonicObserver, E_FFTObserver, P_FFTObserver
+
 
 def curl_Ez(field, cell):
     return field[cell + 1] - field[cell]
@@ -12,7 +16,7 @@ def curl_Hy(field, cell):
 
 class Grid:
 
-    def __init__(self, nx, dx):
+    def __init__(self, nx, dx, courant=1, benchmark=None):
         self.mu = np.ones(nx)               # permeability - free space / vacuum
         self.eps = np.ones(nx)              # permittivity - free space / vacuum
         self.conductivity = np.zeros(nx)
@@ -22,15 +26,17 @@ class Grid:
         self.Hy = np.zeros(nx)
         self.J_p = np.zeros(nx)
         self.P = np.zeros(nx)
-        self.courant = 1                   # 1 = magic time step ( Taflove - numerical error is minimal )
-        self.dt = dx * self.courant / c0
+        self.courant = courant                  # 1 = magic time step ( Taflove - numerical error is minimal )
+        self.dt = dx * courant / c0
         self.timesteps = None
         self.timesteps_passed = 0
+        self.benchmark_type = benchmark     # some objects have to know which kind of benchmark is processed to work properly
         self.all_E_mats = set()
         self.sources = []                   # saving source.py-objects
         self.materials = []                 # saving material.py-objects
         self.boundaries = []                # saving boundary.py-objects
         self.local_observers = []           # saving time-data of the field
+
 
     @property
     def time_passed(self):
@@ -69,6 +75,16 @@ class Grid:
 
     def visualize_permittivity(self):
         visualize_permittivity(self)
+
+    def visualize_fft_observed(self):
+        visualize_fft(self)
+
+    def store_obs_data(self):
+        for obs in self.local_observers:
+            if isinstance(obs, E_FFTObserver):
+                obs.store_Ez_data(filename=obs.observer_name + '.csv')
+            elif isinstance(obs, P_FFTObserver):
+                obs.store_P_data(filename=obs.observer_name + '.csv')
 
     def get_observed_signals(self):
         dict = {'name': [], 'position': [], 'first timestep': [], 'second timestep': [], 'amplitude': [], 'phase': []}
@@ -145,6 +161,7 @@ class Grid:
         # saving local points in order to extract phase and amplitude data
         for observer in self.local_observers:
             observer.save_Ez()
+            observer.save_P()
 
 
 

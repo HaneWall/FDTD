@@ -1,4 +1,5 @@
 from .constants import c0
+from werkzeug.utils import cached_property
 import numpy as np
 
 
@@ -51,13 +52,15 @@ class RightSideGridBoundary(Boundary):
         self.arr_Hy = [0]
 
     def save_Ez(self):
-        self.arr_Ez.append(self.grid.E[self.position - 1])
+        pass
+        #self.arr_Ez.append(self.grid.E[self.position - 1])
 
     def save_Hy(self):
-        self.arr_Hy.append(self.grid.B[self.position - 1])
+        self.arr_Hy.append(self.grid.Hy[self.position - 1])
 
     def step_Ez(self):
-        self.grid.Ez[self.position] = self.arr_Ez.pop(0)
+        pass
+        #self.grid.Ez[self.position] = self.arr_Ez.pop(0)
 
     def step_Hy(self):
         self.grid.Hy[self.position] = self.arr_Hy.pop(0)
@@ -73,11 +76,11 @@ class LeftSideMur(Boundary):
         self.prev_Ez = [0, 0]
         self.prev_Hy = [0, 0]
 
-    @property
+    @cached_property
     def c_mat(self):
         return c0 / np.sqrt(self.grid.eps[self.position] * self.grid.mu[self.position])
 
-    @property
+    @cached_property
     def radiation_coeff(self):
         u = self.c_mat * self.grid.dt / self.grid.dx
         return (u - 1) / (u + 1)
@@ -110,11 +113,11 @@ class RightSideMur(Boundary):
         self.prev_Ez = [0, 0]
         self.prev_Hy = [0, 0]
 
-    @property
+    @cached_property
     def c_mat(self):
         return c0 / np.sqrt(self.grid.eps[self.position] * self.grid.mu[self.position])
 
-    @property
+    @cached_property
     def radiation_coeff(self):
         u = self.c_mat * self.grid.dt / self.grid.dx
         return (u - 1) / (u + 1)

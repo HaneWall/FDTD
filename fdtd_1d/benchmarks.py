@@ -1,7 +1,7 @@
 import numpy as np
 import fdtd_1d as f
 import matplotlib.pyplot as plt
-from .constants import c0
+from .constants import c0, BLUE, CYAN, TEAL, ORANGE, RED, MAGENTA, GREY
 
 # Implementation of a dielectric slab
 def theory_dielectric_slab_complex(grid):
@@ -242,7 +242,7 @@ class Harmonic_Slab_Setup:
 
 class Harmonic_Slab_Lorentz_Setup:
 
-    def __init__(self, dx,  length_grid_in_dx, length_media_in_dx, start_index_media, wavelength, ampl, conductivity, eps_inf, gamma, w0, chi_1, chi_2, chi_3, timesteps):
+    def __init__(self, dx,  length_grid_in_dx, length_media_in_dx, start_index_media, wavelength, ampl, conductivity, eps_inf, gamma, w0, chi_1, chi_2, chi_3, timesteps, courant=1):
         self.indices = [start_index_media + 2 + i for i in np.arange(0, length_media_in_dx - 1)]
         self.start_media = start_index_media
         self.dx = dx
@@ -267,16 +267,30 @@ class Harmonic_Slab_Lorentz_Setup:
         self.eps_complex = []
         self.n_real = []
         self.timesteps = timesteps
+        self.courant = courant
 
     def _grid_wo_slab(self):
         position_src = self.start_media - 1
         position_obs = self.Nx - 3
         end_mur = self.Nx - 1
-        wo_grid = f.Grid(self.Nx, dx=self.dx)
-        wo_grid[position_src] = f.ActivatedSinus(name='SinsquaredActivated', wavelength=self.lamb, carrier_wavelength=(self.lamb * 30), phase_shift=0, amplitude=self.ampl, tfsf=True)
+        wo_grid = f.Grid(self.Nx, dx=self.dx, courant=self.courant)
+        if wo_grid.courant == 1:
+            wo_grid[position_src] = f.ActivatedSinus(name='SinsquaredActivated', wavelength=self.lamb,
+                                                     carrier_wavelength=(self.lamb * 30), phase_shift=0,
+                                                     amplitude=self.ampl, tfsf=True)
+        else:
+            wo_grid[position_src] = f.ActivatedSinus(name='SinsquaredActivated', wavelength=self.lamb,
+                                                     carrier_wavelength=(self.lamb * 30), phase_shift=0,
+                                                     amplitude=self.ampl, tfsf=False)
         wo_grid[position_obs] = f.QuasiHarmonicObserver(name='firstobserver', first_timestep=self.timesteps-200)
-        wo_grid[0] = f.LeftSideMur()
-        wo_grid[end_mur] = f.RightSideMur()
+
+        if wo_grid.courant == 0.5:
+            wo_grid[0] = f.LeftSideGridBoundary()
+            wo_grid[end_mur] = f.RightSideGridBoundary()
+        else:
+            wo_grid[0] = f.LeftSideMur()
+            wo_grid[end_mur] = f.RightSideMur()
+
         wo_grid.run_timesteps(self.timesteps, vis=False)
         self.wo_phase.append(wo_grid.local_observers[0].phase)
 
@@ -287,20 +301,31 @@ class Harmonic_Slab_Lorentz_Setup:
         for ind in self.indices:
             # Step 1: init grid
             w_grid = 'slab' + str(ind)
-            w_grid = f.Grid(nx=self.Nx, dx=self.dx)
+            w_grid = f.Grid(nx=self.Nx, dx=self.dx, courant=self.courant)
 
             # Step 2: init media
             w_grid[self.start_media:ind] = f.LorentzMedium(name='media', permeability=1, eps_inf=self.eps_inf, conductivity=self.conductivity, gamma=self.gamma, chi_1=self.chi_1, chi_2=self.chi_2, chi_3=self.chi_3, w0=self.w0)
 
             # Step 3: init source
-            w_grid[position_src] = f.ActivatedSinus(name='SinsquaredActivated', wavelength=self.lamb, carrier_wavelength=(self.lamb * 30), phase_shift=0, amplitude=self.ampl, tfsf=True)
+            if w_grid.courant == 1:
+                w_grid[position_src] = f.ActivatedSinus(name='SinsquaredActivated', wavelength=self.lamb,
+                                                         carrier_wavelength=(self.lamb * 30), phase_shift=0,
+                                                         amplitude=self.ampl, tfsf=True)
+            else:
+                w_grid[position_src] = f.ActivatedSinus(name='SinsquaredActivated', wavelength=self.lamb,
+                                                         carrier_wavelength=(self.lamb * 30), phase_shift=0,
+                                                         amplitude=self.ampl, tfsf=False)
 
             # Step 4: add observer
             w_grid[position_obs] = f.QuasiHarmonicObserver(name='firstobserver', first_timestep=self.timesteps-200)
 
             # Step 5: add boundaries
-            w_grid[0] = f.LeftSideMur()
-            w_grid[end_mur] = f.RightSideMur()
+            if w_grid.courant == 0.5:
+                w_grid[0] = f.LeftSideGridBoundary()
+                w_grid[end_mur] = f.RightSideGridBoundary()
+            else:
+                w_grid[0] = f.LeftSideMur()
+                w_grid[end_mur] = f.RightSideMur()
 
             # Step 6: run simulation
             w_grid.run_timesteps(timesteps=self.timesteps, vis=False)
@@ -321,35 +346,184 @@ class Harmonic_Slab_Lorentz_Setup:
     def _visualize(self):
         fig, axes = plt.subplots(2, 2)
         fig.suptitle(r'$n_{real}=$'+'{0:.3}'.format(self.n_real[0]) + r'     $N_{\lambda_{media}}=$' + '{0:.3}'.format(self.lamb/(self.dx*self.n_real[0])), fontsize=20)
-        axes[0][0].plot(np.array(self.indices) - self.start_media, np.array(self.theo_amplitude), label='theorie', color='blue', marker='o', alpha=0.5)
-        axes[0][0].grid(True, linestyle=(0, (1, 5)), color='black', linewidth=1)
-        axes[0][0].plot(np.array(self.indices) - self.start_media, np.array(self.exp_amplitude), label='FDTD', linestyle='dashed', color='red', marker='s', alpha=0.5)
+        axes[0][0].plot(np.array(self.indices) - self.start_media, np.array(self.theo_amplitude), label='theorie', color=ORANGE, alpha=1)
+        axes[0][0].grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
+        axes[0][0].plot(np.array(self.indices) - self.start_media, np.array(self.exp_amplitude), label='FDTD', linestyle='dashed', color=TEAL, alpha=1)
         axes[0][0].legend(loc='best')
         axes[0][0].set_xlabel('Breite des Mediums in ' + r'$\Delta_x$', fontsize=14)
         axes[0][0].set_ylabel('Transmittierte Amplitude ' + r'$Ez_{tr}$', fontsize=14)
         axes[0][0].set_xlim([0, self.length_media + 1])
-        axes[0][1].plot(np.array(self.indices) - self.start_media, np.array(self.theo_amplitude) / np.array(self.exp_amplitude), color='black')
+        axes[0][1].plot(np.array(self.indices) - self.start_media, np.array(self.theo_amplitude) / np.array(self.exp_amplitude), color=TEAL)
         axes[0][1].set_ylabel(r'$E_{tr,theo}$ / $E_{tr,FDTD}$', fontsize=14)
         axes[0][1].set_xlabel('Breite des Mediums in ' + r'$\Delta_x$', fontsize=14)
-        axes[0][1].grid(True, linestyle=(0, (1, 5)), color='black', linewidth=1)
+        axes[0][1].grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
         axes[0][1].set_xlim([0, self.length_media + 1])
         axes[1][0].set_ylabel('Phasenunterschied', fontsize=14)
-        axes[1][0].plot(np.array(self.indices) - self.start_media, self.theo_phasenunterschied, label='theorie', color='blue', alpha=0.5)
+        axes[1][0].plot(np.array(self.indices) - self.start_media, self.theo_phasenunterschied, label='theorie', color=ORANGE, alpha=1)
         axes[1][0].set_xlabel('Breite des Mediums in ' + r'$\Delta_x$', fontsize=14)
-        axes[1][0].grid(True, linestyle=(0, (1, 5)), color='black', linewidth=1)
-        axes[1][0].plot(np.array(self.indices) - self.start_media, -np.array(self.exp_phase) + self.wo_phase, color='red', linestyle='dashed',
-                        label='FDTD', alpha=0.5)
+        axes[1][0].grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
+        axes[1][0].plot(np.array(self.indices) - self.start_media, self.get_exp_phasedifference(), color=TEAL, linestyle='dashed',
+                        label='FDTD', alpha=1)
         axes[1][0].set_xlim([0, self.length_media + 1])
         axes[1][0].legend()
         axes[1][1].set_xlabel('Breite des Mediums in ' + r'$\Delta_x$', fontsize=14)
         axes[1][1].set_ylabel(r'$d(\phi_{exp},\phi_{theo})$', fontsize=14)
         axes[1][1].plot(np.array(self.indices) - self.start_media,
-                        np.abs(-np.array(self.exp_phase) + self.wo_phase - np.array(self.theo_phasenunterschied)), color='black')
-        axes[1][1].grid(True, linestyle=(0, (1, 5)), color='black', linewidth=1)
+                        np.abs(self.get_exp_phasedifference() - np.array(self.theo_phasenunterschied)), color=TEAL)
+        axes[1][1].grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
         axes[1][1].set_xlim([0, self.length_media + 1])
         plt.show()
+
+    def get_exp_phasedifference(self):
+        phase_diff = -np.array(self.exp_phase) + self.wo_phase
+        for index in range(len(phase_diff)):
+            if phase_diff[index] > np.pi:
+                phase_diff[index] -= 2*np.pi
+        return phase_diff
 
     def run_benchmark(self):
         self._grid_wo_slab()
         self._grids_w_slab()
         self._visualize()
+
+class Quasi_Phase_Matching:
+    ''' reproduces paper QuasiPhaseMatching from Varin's Paper '''
+
+    def __init__(self, number_of_lambdas, timesteps, courant, name, peak_timestep, mode='qpm_harmonic'):
+        self.lambda_qpm = number_of_lambdas
+        self.half_qpm = 737
+        self.dx = 4e-09
+        self.timesteps = timesteps
+        self.courant = courant
+        self.nx = number_of_lambdas * (2*self.half_qpm + 1) + 10
+        self.name = name
+        self.start_media = 5
+        self.ending_indices = [self.start_media + i*737 for i in range(self.lambda_qpm*2 + 1)]
+        self.peak_timestep = peak_timestep
+        self.mode = mode
+
+    def _create_grid(self):
+        position_P_obs = self.nx - 7
+        position_E_obs = self.nx - 3
+
+        # step 1: init grid
+        qpm_grid = f.Grid(nx=self.nx, courant=self.courant, dx=self.dx, benchmark='qpm_harmonic')
+
+        # step 2: init media
+        for indices in range(len(self.ending_indices) - 1):
+            if indices % 2 == 0:
+                if self.courant < 1:
+                    # eps_inf  = 1 is stable
+
+                    qpm_grid[self.ending_indices[indices]:self.ending_indices[indices + 1]] = f.LorentzMedium(
+                        name='Varin', permeability=1, eps_inf=1.00, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0],
+                        chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
+                else:
+                    qpm_grid[self.ending_indices[indices]:self.ending_indices[indices + 1]] = f.LorentzMedium(
+                        name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0],
+                        chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
+            else:
+                if self.courant < 1:
+                    # eps_inf  = 1 is stable
+
+                    qpm_grid[self.ending_indices[indices]:self.ending_indices[indices + 1]] = f.LorentzMedium(
+                        name='Varin', permeability=1, eps_inf=1.00, chi_1=[2.42, 9.65, 1.46], chi_2=[-30.e-12, 0, 0],
+                        chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
+                else:
+                    qpm_grid[self.ending_indices[indices]:self.ending_indices[indices + 1]] = f.LorentzMedium(
+                        name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[-30.e-12, 0, 0],
+                        chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
+
+        # step 3: init src
+        if self.courant == 1:
+            qpm_grid[3] = f.EnvelopeSinus(name='test', wavelength=1.064e-06, fwhm=14.6e-06, amplitude=2.74492e7,
+                                       phase_shift=0, peak_timestep=self.peak_timestep, tfsf=True)
+        else:
+            qpm_grid[3] = f.EnvelopeSinus(name='test', wavelength=1.064e-06, fwhm=14.6e-06, amplitude=2.74492e7,
+                                          phase_shift=0, peak_timestep=self.peak_timestep, tfsf=False)
+
+        # step 4: add obs
+        qpm_grid[position_P_obs] = f.P_FFTObserver(name='P_'+self.name, first_timestep=0, second_timestep=self.timesteps - 1)
+        qpm_grid[position_E_obs] = f.E_FFTObserver(name='E_'+self.name, first_timestep=0, second_timestep=self.timesteps - 1)
+
+        # step 5: add boundary
+        if qpm_grid.courant == 0.5:
+            qpm_grid[0] = f.LeftSideGridBoundary()
+            qpm_grid[self.nx-1] = f.RightSideGridBoundary()
+        else:
+            qpm_grid[0] = f.LeftSideMur()
+            qpm_grid[self.nx-1] = f.RightSideMur()
+
+        # step 6: run simulation
+        qpm_grid.run_timesteps(timesteps=self.timesteps, vis=True)
+
+        # step 7: misc
+        qpm_grid.store_obs_data()
+
+    def _create_grid_dis_obs(self):
+        obs_distance = (self.nx - 10)//50   # 50 distributed observer
+        obs_positions = np.arange(start=5, stop=self.nx-6, step=obs_distance)
+        print(obs_positions)
+        # step 1: init grid
+        qpm_grid = f.Grid(nx=self.nx, courant=self.courant, dx=self.dx, benchmark='qpm_harmonic_length')
+
+        # step 2: init media
+        for indices in range(len(self.ending_indices) - 1):
+            if indices % 2 == 0:
+                if self.courant < 1:
+                    # eps_inf  = 1 is stable
+
+                    qpm_grid[self.ending_indices[indices]:self.ending_indices[indices + 1]] = f.LorentzMedium(
+                        name='Varin', permeability=1, eps_inf=1.00, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0],
+                        chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
+                else:
+                    qpm_grid[self.ending_indices[indices]:self.ending_indices[indices + 1]] = f.LorentzMedium(
+                        name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0],
+                        chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
+            else:
+                if self.courant < 1:
+                    # eps_inf  = 1 is stable
+
+                    qpm_grid[self.ending_indices[indices]:self.ending_indices[indices + 1]] = f.LorentzMedium(
+                        name='Varin', permeability=1, eps_inf=1.00, chi_1=[2.42, 9.65, 1.46], chi_2=[-30.e-12, 0, 0],
+                        chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
+                else:
+                    qpm_grid[self.ending_indices[indices]:self.ending_indices[indices + 1]] = f.LorentzMedium(
+                        name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[-30.e-12, 0, 0],
+                        chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
+
+        # step 3: init src
+        if self.courant == 1:
+            qpm_grid[3] = f.EnvelopeSinus(name='test', wavelength=1.064e-06, fwhm=14.6e-06, amplitude=2.74492e7,
+                                       phase_shift=0, peak_timestep=self.peak_timestep, tfsf=True)
+        else:
+            qpm_grid[3] = f.EnvelopeSinus(name='test', wavelength=1.064e-06, fwhm=14.6e-06, amplitude=2.74492e7,
+                                          phase_shift=0, peak_timestep=self.peak_timestep, tfsf=False)
+        # step 4: add obs
+        for pos in obs_positions:
+            qpm_grid[int(pos)] = f.E_FFTObserver(name='E_'+str(pos)+'_'+self.name, first_timestep=0, second_timestep=self.timesteps-1)
+
+        # step 5: add boundary
+        if qpm_grid.courant == 0.5:
+            qpm_grid[0] = f.LeftSideGridBoundary()
+            qpm_grid[self.nx - 1] = f.RightSideGridBoundary()
+        else:
+            qpm_grid[0] = f.LeftSideMur()
+            qpm_grid[self.nx - 1] = f.RightSideMur()
+
+        # step 6: run simulation
+        qpm_grid.run_timesteps(timesteps=self.timesteps, vis=True)
+
+        # step 7: misc
+        qpm_grid.store_obs_data()
+
+
+    def run_benchmark(self):
+        if self.mode == 'qpm_harmonic':
+            self._create_grid()
+
+        else:
+            self._create_grid_dis_obs()
+
+
+
