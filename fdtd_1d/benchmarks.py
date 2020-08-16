@@ -465,7 +465,7 @@ class Quasi_Phase_Matching:
         obs_positions = np.arange(start=5, stop=self.nx-6, step=obs_distance)
         print(obs_positions)
         # step 1: init grid
-        qpm_grid = f.Grid(nx=self.nx, courant=self.courant, dx=self.dx, benchmark='qpm_harmonic_length')
+        qpm_grid = f.Grid(nx=self.nx+4, courant=self.courant, dx=self.dx, benchmark='qpm_harmonic_length')
 
         # step 2: init media
         for indices in range(len(self.ending_indices) - 1):
@@ -491,10 +491,10 @@ class Quasi_Phase_Matching:
                     qpm_grid[self.ending_indices[indices]:self.ending_indices[indices + 1]] = f.LorentzMedium(
                         name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[-30.e-12, 0, 0],
                         chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
-
+            qpm_grid[self.ending_indices[-1]:self.nx + 4] = f.NonDispersiveMedia(name='trying_to_absorb', permeability=1, permittivity=1.05, conductivity=0)
         # step 3: init src
         if self.courant == 1:
-            qpm_grid[3] = f.EnvelopeSinus(name='test', wavelength=1.064e-06, fwhm=14.6e-06, amplitude=2.74492e7,
+            qpm_grid[3] = f.EnvelopeSinus(name='test', wavelength=1.064e-06, fwhm=7.3e-06, amplitude=2.74492e7,
                                        phase_shift=0, peak_timestep=self.peak_timestep, tfsf=True)
         else:
             qpm_grid[3] = f.EnvelopeSinus(name='test', wavelength=1.064e-06, fwhm=14.6e-06, amplitude=2.74492e7,
@@ -506,7 +506,7 @@ class Quasi_Phase_Matching:
         # step 5: add boundary
         if qpm_grid.courant == 0.5:
             qpm_grid[0] = f.LeftSideGridBoundary()
-            qpm_grid[self.nx - 1] = f.RightSideGridBoundary()
+            qpm_grid[self.nx + 3] = f.RightSideGridBoundary()
         else:
             qpm_grid[0] = f.LeftSideMur()
             qpm_grid[self.nx - 1] = f.RightSideMur()
