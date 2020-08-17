@@ -1,7 +1,7 @@
 from fdtd_1d.utilities import get_amplitude_and_phase
 import numpy as np
 import csv
-import os.path
+import os
 from werkzeug.utils import cached_property
 
 class ParentObserver:
@@ -72,6 +72,7 @@ class E_FFTObserver(ParentObserver):
     def __init__(self, name, first_timestep, second_timestep):
         super().__init__()
         self.observer_name = name
+        self.type = 'E'
         self.first_timestep = first_timestep
         self.second_timestep = second_timestep
         self.observed_E = []
@@ -92,12 +93,12 @@ class E_FFTObserver(ParentObserver):
             self.observed_E.append(self.grid.Ez[self.position])
 
     # store Ez (and Ez_fft) in order to analyze data wo computing simulation again
-    def store_Ez_data(self, filename):
+    def store_Ez_data(self, filename, benchmark_name='No_Name'):
         if self.grid.benchmark_type is None:
-            filepath_0 = os.path.join(os.path.dirname(__file__), 'saved_data')
+            filepath_0 = os.path.join(os.path.dirname(__file__), 'saved_data/own_setups')
 
         else:
-            filepath_0 = os.path.join(os.path.dirname(__file__), 'saved_data/'+self.grid.benchmark_type)
+            filepath_0 = os.path.join(os.path.dirname(__file__), 'saved_data/'+self.grid.benchmark_type+'/'+benchmark_name)
 
         filepath_1 = os.path.join(filepath_0, filename)
         with open(filepath_1, 'w', newline='') as csvfile:
@@ -116,6 +117,7 @@ class P_FFTObserver(ParentObserver):
     def __init__(self, name, first_timestep, second_timestep):
         super().__init__()
         self.observer_name = name
+        self.type = 'P'
         self.first_timestep = first_timestep
         self.second_timestep = second_timestep
         self.observed_P = []
@@ -134,12 +136,13 @@ class P_FFTObserver(ParentObserver):
         if self.grid.timesteps_passed in range(self.first_timestep, self.second_timestep + 1):
             self.observed_P.append(self.grid.P[self.position])
 
-    def store_P_data(self, filename):
+    def store_P_data(self, filename, benchmark_name='No_Name'):
         if self.grid.benchmark_type is None:
-            filepath_0 = os.path.join(os.path.dirname(__file__), 'saved_data')
+            filepath_0 = os.path.join(os.path.dirname(__file__), 'saved_data/own_setups')
 
         else:
-            filepath_0 = os.path.join(os.path.dirname(__file__), 'saved_data/' + self.grid.benchmark_type)
+            filepath_0 = os.path.join(os.path.dirname(__file__), 'saved_data/' + self.grid.benchmark_type + '/' + benchmark_name)
+
 
         filepath_1 = os.path.join(filepath_0, filename)
         with open(filepath_1, 'w', newline='') as csvfile:

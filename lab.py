@@ -6,10 +6,15 @@ import fdtd_1d as f
 #setup_2 = f.TiO2_Si02_Dielectric_Mirror_Setup(N_lambda_media=25, wavelength_guided_for=800.e-09, wavelength=800e-09, ampl=1, timesteps=15000, number_of_layer_pairs=15, vary_layers=True, vary_inc_wavelength=False)
 #setup_2.run_benchmark()
 #setup_3 = f.Harmonic_Slab_Lorentz_Setup(dx=4/6 * 3.91e-07, length_grid_in_dx=50, length_media_in_dx=30, start_index_media=5, wavelength=1.75e-05, eps_inf=1.5, chi_1=[5.1], chi_2=[0], chi_3=[0], conductivity=0, w0=[1.2566e14], gamma=[8e12], ampl=1, timesteps=4000)
-#setup_3 = f.Harmonic_Slab_Lorentz_Setup(dx=3/6 * 3.91e-07, length_grid_in_dx=50, length_media_in_dx=30, start_index_media=5, wavelength=1.75e-05, eps_inf=1.01, chi_1=[2.1, 2.4], chi_2=[0, 0], chi_3=[0, 0], conductivity=0, w0=[1.2566e14, 1.2e13], gamma=[8e12, 9e14], ampl=1, timesteps=6000, courant=1)
+#setup_3 = f.Harmonic_Slab_Lorentz_Setup(name='test', dx=3/6 * 3.91e-07, length_grid_in_dx=50, length_media_in_dx=30, start_index_media=5, wavelength=1.75e-05, eps_inf=1.01, chi_1=[2.1, 2.4], chi_2=[0, 0], chi_3=[0, 0], conductivity=0, w0=[1.2566e14, 1.2e13], gamma=[8e12, 9e14], ampl=1, timesteps=600, courant=1)
 #setup_3.run_benchmark()
-setup_4 = f.Quasi_Phase_Matching(number_of_lambdas=2, timesteps=27000, courant=1, name='two_lambda_27000_courant_1_timestep_peak_16000_analyze_shg_smaller_peak_trying_to_absorb', peak_timestep=16000, mode='length')
-setup_4.run_benchmark()
+#setup_3.store_obs_data()
+#setup_4 = f.Quasi_Phase_Matching(number_of_lambdas=3, timesteps=30000, courant=1, name='two_lambda_but3long_30000_courant_1_timestep_peak_8000_analyze_shg_even_smaller_peak', peak_timestep=8000, mode='length')
+#setup_4.run_benchmark()
+
+setup_5 = f.Quasi_Phase_Matching(number_of_lambdas=3, timesteps=30, courant=1, name='testing_new_database2', peak_timestep=8000, mode='length')
+setup_5.run_benchmark()
+setup_5.store_obs_data()
 
 '''
 

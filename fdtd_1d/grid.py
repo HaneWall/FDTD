@@ -37,7 +37,6 @@ class Grid:
         self.boundaries = []                # saving boundary.py-objects
         self.local_observers = []           # saving time-data of the field
 
-
     @property
     def time_passed(self):
         return self.timesteps_passed * self.dt
@@ -79,12 +78,20 @@ class Grid:
     def visualize_fft_observed(self):
         visualize_fft(self)
 
-    def store_obs_data(self):
-        for obs in self.local_observers:
-            if isinstance(obs, E_FFTObserver):
-                obs.store_Ez_data(filename=obs.observer_name + '.csv')
-            elif isinstance(obs, P_FFTObserver):
-                obs.store_P_data(filename=obs.observer_name + '.csv')
+    def store_obs_data(self, benchmark=False, benchmark_name='No_Name'):
+        if benchmark:
+            for obs in self.local_observers:
+                if isinstance(obs, E_FFTObserver):
+                    obs.store_Ez_data(filename='E_'+str(obs.position) + '.csv', benchmark_name=benchmark_name)
+                elif isinstance(obs, P_FFTObserver):
+                    obs.store_P_data(filename='P_'+str(obs.position) + '.csv', benchmark_name=benchmark_name)
+
+        else:
+            for obs in self.local_observers:
+                if isinstance(obs, E_FFTObserver):
+                    obs.store_Ez_data(filename=obs.observer_name + '.csv')
+                elif isinstance(obs, P_FFTObserver):
+                    obs.store_P_data(filename=obs.observer_name + '.csv')
 
     def get_observed_signals(self):
         dict = {'name': [], 'position': [], 'first timestep': [], 'second timestep': [], 'amplitude': [], 'phase': []}
