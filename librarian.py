@@ -47,8 +47,66 @@ class Case_qpm_harmonic(Case):
         abs_fft_sqrd_max = np.max(self.abs_fft_sqrd)
         self.normalized_abs_fft_sqrd = self.abs_fft_sqrd/abs_fft_sqrd_max
 
+class Lorentz_Slab_benchmark(Case):
+
+
+    def __init__(self, dir_name):
+        super().__init__()
+        self.path += '/harmonic_lorentz_slab/' + dir_name
+        self.dir_name = dir_name
+        self.dx = []
+        self.dt = []
+        self.timesteps = []
+        self.N_lambda = []
+        self.width_in_dx = []
+        self.theo_ampl = []
+        self.exp_ampl = []
+        self.theo_phase = []
+        self.exp_phase = []
+
+        self._set_grid_information()
+        self._set_data()
+
+    def _set_grid_information(self):
+        df = pd.read_csv(self.path + '/' + self.dir_name +'.csv', sep=',', header=None, nrows=1)
+        self.dx.append(float(df[1]))
+        self.timesteps.append(float(df[3]))
+        self.dt = np.array(self.dx) / c0
+        self.N_lambda.append(float(df[5]))
+
+    def _set_data(self):
+        df = pd.read_csv(self.path + '/' + self.dir_name +'.csv', sep=',', header=None, skiprows=[0, 1])
+        df = df.T
+        self.width_in_dx.append(df[0])
+        self.theo_ampl.append(df[1])
+        self.exp_ampl.append(df[2])
+        self.theo_phase.append(df[3])
+        self.exp_phase.append(df[4])
+
+    def visualize(self):
+        color_spec = [BLUE, CYAN, TEAL, RED, MAGENTA]
+        fig, axes = plt.subplots(nrows=1, ncols=2)
+        axes[0].ticklabel_format(axis='x', style='sci', scilimits=(0, 0))
+        axes[1].ticklabel_format(axis='x', style='sci', scilimits=(0, 0))
+        for grid in range(len(self.dx)):
+            axes[0].plot(self.width_in_dx[grid]*self.dx[grid], self.theo_ampl[grid], color=ORANGE, label='theory')
+            axes[0].plot(self.width_in_dx[grid]*self.dx[grid], self.exp_ampl[grid], color=color_spec[grid], linestyle='dashed',  label=r'$N_{\lambda}=$'+'{0:.3}'.format(self.N_lambda[grid]))
+        axes[0].grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
+        axes[0].legend(loc='best')
+        axes[0].set_xlabel('width in m', fontsize=14)
+        axes[0].set_ylabel('transmitted amplitude ' + r'$E_{z,tr}$', fontsize=14)
+        for grid in range(len(self.dx)):
+            axes[1].plot(self.width_in_dx[grid]*self.dx[grid], self.theo_phase[grid], color=ORANGE, label='theory')
+            axes[1].plot(self.width_in_dx[grid]*self.dx[grid], self.exp_phase[grid], color=color_spec[grid], linestyle='dashed',  label=r'$N_{\lambda}=$'+'{0:.3}'.format(self.N_lambda[grid]))
+        axes[1].grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
+        axes[1].legend(loc='best')
+        axes[1].set_xlabel('width in m', fontsize=14)
+        axes[1].set_ylabel('added phase', fontsize=14)
+        plt.show()
 
 class QPM_Length_benchmark(Case):
+
+
     def __init__(self, dir_name, zero_padding=0):
         super().__init__()
         self.path += '/qpm_harmonic_length/' + dir_name
@@ -152,8 +210,10 @@ class Case_qpm_harmonic_length_old(Case):
         self.normalized_abs_fft_sqrd = self.abs_fft_sqrd / abs_fft_sqrd_max
 
 
-test = QPM_Length_benchmark(dir_name='testing_new_database2')
-test.show_trace()
+#test = QPM_Length_benchmark(dir_name='testing_new_database2')
+#test.show_trace()
+lorentz_slab = Lorentz_Slab_benchmark('test2')
+lorentz_slab.visualize()
 
 
 '''Case0 = Case_qpm_harmonic_length(filename='P_testing_benchmark_obj.csv', zero_padding=80000)

@@ -54,15 +54,22 @@ class benchmark:
 
 class Harmonic_Slab_Lorentz_Setup(benchmark):
 
+    # TODO: modify to create multiple grids with different dx at once --> demonstrates numerical dispersion
+
     def __init__(self,  name, dx, length_grid_in_dx, length_media_in_dx, start_index_media, wavelength, ampl, conductivity, eps_inf, gamma, w0, chi_1, chi_2, chi_3, timesteps, courant=1):
         super().__init__(name=name, benchmark_type='harmonic_lorentz_slab')
-        self.indices = [start_index_media + 2 + i for i in np.arange(0, length_media_in_dx - 1)]
         self.start_media = start_index_media
         self.dx = dx
+        self.indices = []
+        for grid in range(len(self.dx)):
+            self.indices.append([start_index_media + 2 + i for i in np.arange(0, length_media_in_dx[grid] - 1)])
         self.eps_inf = eps_inf
         self.Nx = length_grid_in_dx
         self.length_media = length_media_in_dx
         self.lamb = wavelength
+        self.timesteps = timesteps
+        self.courant = courant
+        self.N_lambda = None
         self.ampl = ampl
         self.conductivity = conductivity
         self.gamma = gamma
@@ -79,34 +86,35 @@ class Harmonic_Slab_Lorentz_Setup(benchmark):
         self.eps_imag = []
         self.eps_complex = []
         self.n_real = []
-        self.timesteps = timesteps
-        self.courant = courant
+        self.grids = []
+
         self.allocate_directory()
 
     def _grid_wo_slab(self):
         position_src = self.start_media - 1
-        position_obs = self.Nx - 3
-        end_mur = self.Nx - 1
-        wo_grid = f.Grid(self.Nx, dx=self.dx, courant=self.courant)
-        if wo_grid.courant == 1:
-            wo_grid[position_src] = f.ActivatedSinus(name='SinsquaredActivated', wavelength=self.lamb,
-                                                     carrier_wavelength=(self.lamb * 30), phase_shift=0,
-                                                     amplitude=self.ampl, tfsf=True)
-        else:
-            wo_grid[position_src] = f.ActivatedSinus(name='SinsquaredActivated', wavelength=self.lamb,
-                                                     carrier_wavelength=(self.lamb * 30), phase_shift=0,
-                                                     amplitude=self.ampl, tfsf=False)
-        wo_grid[position_obs] = f.QuasiHarmonicObserver(name='firstobserver', first_timestep=self.timesteps-200)
+        for grid in range(len(self.dx)):
+            position_obs = self.Nx[grid] - 3
+            end_mur = self.Nx[grid] - 1
+            wo_grid = f.Grid(self.Nx[grid], dx=self.dx[grid], courant=self.courant)
+            if wo_grid.courant == 1:
+                wo_grid[position_src] = f.ActivatedSinus(name='SinsquaredActivated', wavelength=self.lamb,
+                                                         carrier_wavelength=(self.lamb * 30), phase_shift=0,
+                                                         amplitude=self.ampl, tfsf=True)
+            else:
+                wo_grid[position_src] = f.ActivatedSinus(name='SinsquaredActivated', wavelength=self.lamb,
+                                                         carrier_wavelength=(self.lamb * 30), phase_shift=0,
+                                                         amplitude=self.ampl, tfsf=False)
+            wo_grid[position_obs] = f.QuasiHarmonicObserver(name='firstobserver', first_timestep=self.timesteps-200)
 
-        if wo_grid.courant == 0.5:
-            wo_grid[0] = f.LeftSideGridBoundary()
-            wo_grid[end_mur] = f.RightSideGridBoundary()
-        else:
-            wo_grid[0] = f.LeftSideMur()
-            wo_grid[end_mur] = f.RightSideMur()
+            if wo_grid.courant == 0.5:
+                wo_grid[0] = f.LeftSideGridBoundary()
+                wo_grid[end_mur] = f.RightSideGridBoundary()
+            else:
+                wo_grid[0] = f.LeftSideMur()
+                wo_grid[end_mur] = f.RightSideMur()
 
-        wo_grid.run_timesteps(self.timesteps, vis=False)
-        self.wo_phase.append(wo_grid.local_observers[0].phase)
+            wo_grid.run_timesteps(self.timesteps, vis=False)
+            self.wo_phase[grid].append(wo_grid.local_observers[0].phase)
 
     def _grids_w_slab(self):
         position_src = self.start_media - 1
@@ -195,6 +203,9 @@ class Harmonic_Slab_Lorentz_Setup(benchmark):
                 phase_diff[index] -= 2*np.pi
         return phase_diff
 
+    def _set_N_lambda(self):
+        self.N_lambda = self.lamb/(self.dx*self.n_real[0])
+
     def store_obs_data(self):
         '''
         :return:
@@ -209,7 +220,7 @@ class Harmonic_Slab_Lorentz_Setup(benchmark):
         filename = os.path.join(self.dir_path, self.name+'.csv')
         with open(filename, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
-            writer.writerow(['dx', self.dx, 'timesteps', self.timesteps])
+            writer.writerow(['dx', self.dx, 'timesteps', self.timesteps, 'N_lambda', self.N_lambda])
             writer.writerow(['width in dx', 'theory', 'fdtd', 'phase_theory', 'phase_exp'])
             writer.writerow((np.array(self.indices) - self.start_media).tolist())
             writer.writerow(self.theo_amplitude)
@@ -220,6 +231,7 @@ class Harmonic_Slab_Lorentz_Setup(benchmark):
     def run_benchmark(self):
         self._grid_wo_slab()
         self._grids_w_slab()
+        self._set_N_lambda()
         self._visualize()
 
 class Quasi_Phase_Matching(benchmark):
