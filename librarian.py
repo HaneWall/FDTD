@@ -78,6 +78,7 @@ class QPM_Length_benchmark(Case):
             string = os.path.basename(file)
             string = string[2:]
             self.positions.append(int(string[:-4]))
+        self.positions = np.sort(self.positions)
 
     def _set_grid_information(self):
         first_file = self.path + '/E_5.csv'
@@ -86,13 +87,12 @@ class QPM_Length_benchmark(Case):
         self.dx = self.dt * c0
         self.timesteps = int(df[3])
 
-    # TODO ERROR IN MERGING DATA
     def _set_merge_data(self):
         collected_df = pd.DataFrame()
-        for pathfile, pos in zip(os.listdir(self.path), self.positions):
-            indv_df = pd.read_csv(self.path+'/'+str(pathfile), sep=',', header=None, skiprows=[0])
+        for pos, ind in zip(self.positions, range(len(self.positions))):
+            indv_df = pd.read_csv(self.path+'/E_'+str(pos)+'.csv', sep=',', header=None, skiprows=[0])
             indv_df = indv_df.T
-            collected_df[pos] = indv_df[0]
+            collected_df[ind] = indv_df[0]
         self.merged_data = collected_df.to_numpy()
 
     def show_trace(self):
