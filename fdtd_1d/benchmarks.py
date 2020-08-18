@@ -54,22 +54,23 @@ class benchmark:
 
 class Harmonic_Slab_Lorentz_Setup(benchmark):
 
-    # TODO: modify to create multiple grids with different dx at once --> demonstrates numerical dispersion
 
     def __init__(self,  name, dx, length_grid_in_dx, length_media_in_dx, start_index_media, wavelength, ampl, conductivity, eps_inf, gamma, w0, chi_1, chi_2, chi_3, timesteps, courant=1):
         super().__init__(name=name, benchmark_type='harmonic_lorentz_slab')
         self.start_media = start_index_media
         self.dx = dx
         self.indices = []
+        self.grids = []
         for grid in range(len(self.dx)):
             self.indices.append([start_index_media + 2 + i for i in np.arange(0, length_media_in_dx[grid] - 1)])
+            self.grids.append('grid_'+str(grid))
         self.eps_inf = eps_inf
         self.Nx = length_grid_in_dx
         self.length_media = length_media_in_dx
         self.lamb = wavelength
         self.timesteps = timesteps
         self.courant = courant
-        self.N_lambda = None
+        self.N_lambda = [[] for _ in range(len(self.dx))]
         self.ampl = ampl
         self.conductivity = conductivity
         self.gamma = gamma
@@ -77,16 +78,16 @@ class Harmonic_Slab_Lorentz_Setup(benchmark):
         self.chi_1 = chi_1
         self.chi_2 = chi_2
         self.chi_3 = chi_3
-        self.wo_phase = []
-        self.theo_phasenunterschied = []
-        self.theo_amplitude = []
-        self.exp_phase = []
-        self.exp_amplitude = []
+        self.wo_phase = [[] for _ in range(len(self.dx))]
+        self.theo_phasenunterschied = [[] for _ in range(len(self.dx))]
+        self.theo_amplitude = [[] for _ in range(len(self.dx))]
+        self.exp_phase = [[] for _ in range(len(self.dx))]
+        self.exp_amplitude = [[] for _ in range(len(self.dx))]
         self.eps_real = []
         self.eps_imag = []
         self.eps_complex = []
         self.n_real = []
-        self.grids = []
+
 
         self.allocate_directory()
 
@@ -104,7 +105,7 @@ class Harmonic_Slab_Lorentz_Setup(benchmark):
                 wo_grid[position_src] = f.ActivatedSinus(name='SinsquaredActivated', wavelength=self.lamb,
                                                          carrier_wavelength=(self.lamb * 30), phase_shift=0,
                                                          amplitude=self.ampl, tfsf=False)
-            wo_grid[position_obs] = f.QuasiHarmonicObserver(name='firstobserver', first_timestep=self.timesteps-200)
+            wo_grid[position_obs] = f.QuasiHarmonicObserver(name='firstobserver', first_timestep=self.timesteps[grid]-200)
 
             if wo_grid.courant == 0.5:
                 wo_grid[0] = f.LeftSideGridBoundary()
@@ -113,56 +114,57 @@ class Harmonic_Slab_Lorentz_Setup(benchmark):
                 wo_grid[0] = f.LeftSideMur()
                 wo_grid[end_mur] = f.RightSideMur()
 
-            wo_grid.run_timesteps(self.timesteps, vis=False)
+            wo_grid.run_timesteps(self.timesteps[grid], vis=False)
             self.wo_phase[grid].append(wo_grid.local_observers[0].phase)
 
     def _grids_w_slab(self):
         position_src = self.start_media - 1
-        position_obs = self.Nx - 3
-        end_mur = self.Nx - 1
-        for ind in self.indices:
-            # Step 1: init grid
-            w_grid = 'slab' + str(ind)
-            w_grid = f.Grid(nx=self.Nx, dx=self.dx, courant=self.courant)
+        for grid in range(len(self.dx)):
+            position_obs = self.Nx[grid] - 3
+            end_mur = self.Nx[grid] - 1
+            for ind in self.indices[grid]:
+                # Step 1: init grid
+                w_grid = 'slab' + str(ind)
+                w_grid = f.Grid(nx=self.Nx[grid], dx=self.dx[grid], courant=self.courant)
 
-            # Step 2: init media
-            w_grid[self.start_media:ind] = f.LorentzMedium(name='media', permeability=1, eps_inf=self.eps_inf, conductivity=self.conductivity, gamma=self.gamma, chi_1=self.chi_1, chi_2=self.chi_2, chi_3=self.chi_3, w0=self.w0)
+                # Step 2: init media
+                w_grid[self.start_media:ind] = f.LorentzMedium(name='media', permeability=1, eps_inf=self.eps_inf, conductivity=self.conductivity, gamma=self.gamma, chi_1=self.chi_1, chi_2=self.chi_2, chi_3=self.chi_3, w0=self.w0)
 
-            # Step 3: init source
-            if w_grid.courant == 1:
-                w_grid[position_src] = f.ActivatedSinus(name='SinsquaredActivated', wavelength=self.lamb,
-                                                         carrier_wavelength=(self.lamb * 30), phase_shift=0,
-                                                         amplitude=self.ampl, tfsf=True)
-            else:
-                w_grid[position_src] = f.ActivatedSinus(name='SinsquaredActivated', wavelength=self.lamb,
-                                                         carrier_wavelength=(self.lamb * 30), phase_shift=0,
-                                                         amplitude=self.ampl, tfsf=False)
+                # Step 3: init source
+                if w_grid.courant == 1:
+                    w_grid[position_src] = f.ActivatedSinus(name='SinsquaredActivated', wavelength=self.lamb,
+                                                             carrier_wavelength=(self.lamb * 30), phase_shift=0,
+                                                             amplitude=self.ampl, tfsf=True)
+                else:
+                    w_grid[position_src] = f.ActivatedSinus(name='SinsquaredActivated', wavelength=self.lamb,
+                                                             carrier_wavelength=(self.lamb * 30), phase_shift=0,
+                                                             amplitude=self.ampl, tfsf=False)
 
-            # Step 4: add observer
-            w_grid[position_obs] = f.QuasiHarmonicObserver(name='firstobserver', first_timestep=self.timesteps-200)
+                # Step 4: add observer
+                w_grid[position_obs] = f.QuasiHarmonicObserver(name='firstobserver', first_timestep=self.timesteps[grid]-200)
 
-            # Step 5: add boundaries
-            if w_grid.courant == 0.5:
-                w_grid[0] = f.LeftSideGridBoundary()
-                w_grid[end_mur] = f.RightSideGridBoundary()
-            else:
-                w_grid[0] = f.LeftSideMur()
-                w_grid[end_mur] = f.RightSideMur()
+                # Step 5: add boundaries
+                if w_grid.courant == 0.5:
+                    w_grid[0] = f.LeftSideGridBoundary()
+                    w_grid[end_mur] = f.RightSideGridBoundary()
+                else:
+                    w_grid[0] = f.LeftSideMur()
+                    w_grid[end_mur] = f.RightSideMur()
 
-            # Step 6: run simulation
-            w_grid.run_timesteps(timesteps=self.timesteps, vis=False)
+                # Step 6: run simulation
+                w_grid.run_timesteps(timesteps=self.timesteps[grid], vis=False)
 
-            # Step 7: misc
-            self.exp_amplitude.append(w_grid.local_observers[0].amplitude)
-            self.exp_phase.append(w_grid.local_observers[0].phase)
-            self.theo_amplitude.append(theory_dielectric_slab_complex(w_grid)[0])
-            self.theo_phasenunterschied.append(theory_dielectric_slab_complex(w_grid)[1])
-            # if list self.eps_real is empty:
-            if not self.eps_real:
-                self.eps_real.append(w_grid.materials[0].epsilon_real(w_grid.sources[0].omega))
-                self.eps_imag.append(w_grid.materials[0].epsilon_imag(w_grid.sources[0].omega))
-                self.eps_complex.append(w_grid.materials[0].epsilon_complex(w_grid.sources[0].omega))
-                self.n_real.append(np.sqrt((np.abs(self.eps_complex[0]) + self.eps_real[0])/2))
+                # Step 7: misc
+                self.exp_amplitude[grid].append(w_grid.local_observers[0].amplitude)
+                self.exp_phase[grid].append(w_grid.local_observers[0].phase)
+                self.theo_amplitude[grid].append(theory_dielectric_slab_complex(w_grid)[0])
+                self.theo_phasenunterschied[grid].append(theory_dielectric_slab_complex(w_grid)[1])
+                # if list self.eps_real is empty:
+                if not self.eps_real:
+                    self.eps_real.append(w_grid.materials[0].epsilon_real(w_grid.sources[0].omega))
+                    self.eps_imag.append(w_grid.materials[0].epsilon_imag(w_grid.sources[0].omega))
+                    self.eps_complex.append(w_grid.materials[0].epsilon_complex(w_grid.sources[0].omega))
+                    self.n_real.append(np.sqrt((np.abs(self.eps_complex[0]) + self.eps_real[0])/2))
 
 
     def _visualize(self):
@@ -197,14 +199,17 @@ class Harmonic_Slab_Lorentz_Setup(benchmark):
         plt.show()
 
     def get_exp_phasedifference(self):
-        phase_diff = -np.array(self.exp_phase) + self.wo_phase
-        for index in range(len(phase_diff)):
-            if phase_diff[index] > np.pi:
-                phase_diff[index] -= 2*np.pi
+        phase_diff = [[] for _ in range(len(self.dx))]
+        for grid in range(len(self.dx)):
+            phase_diff[grid] = -np.array(self.exp_phase[grid]) + self.wo_phase[grid]
+            for index in range(len(phase_diff[grid])):
+                if phase_diff[grid][index] > np.pi:
+                    phase_diff[grid][index] -= 2*np.pi
         return phase_diff
 
     def _set_N_lambda(self):
-        self.N_lambda = self.lamb/(self.dx*self.n_real[0])
+        for grid in range(len(self.dx)):
+            self.N_lambda[grid] = self.lamb/(self.dx[grid]*self.n_real[0])
 
     def store_obs_data(self):
         '''
@@ -216,23 +221,23 @@ class Harmonic_Slab_Lorentz_Setup(benchmark):
         phase_theory ...
         phase_exp ...
         '''
-
-        filename = os.path.join(self.dir_path, self.name+'.csv')
-        with open(filename, 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow(['dx', self.dx, 'timesteps', self.timesteps, 'N_lambda', self.N_lambda])
-            writer.writerow(['width in dx', 'theory', 'fdtd', 'phase_theory', 'phase_exp'])
-            writer.writerow((np.array(self.indices) - self.start_media).tolist())
-            writer.writerow(self.theo_amplitude)
-            writer.writerow(self.exp_amplitude)
-            writer.writerow(self.theo_phasenunterschied)
-            writer.writerow(self.get_exp_phasedifference().tolist())
+        for grid in range(len(self.dx)):
+            filename = os.path.join(self.dir_path, self.grids[grid]+'.csv')
+            with open(filename, 'w', newline='') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(['dx', self.dx[grid], 'timesteps', self.timesteps[grid], 'N_lambda', self.N_lambda[grid]])
+                writer.writerow(['width in dx', 'theory', 'fdtd', 'phase_theory', 'phase_exp'])
+                writer.writerow((np.array(self.indices[grid]) - self.start_media).tolist())
+                writer.writerow(self.theo_amplitude[grid])
+                writer.writerow(self.exp_amplitude[grid])
+                writer.writerow(self.theo_phasenunterschied[grid])
+                writer.writerow(self.get_exp_phasedifference()[grid].tolist())
 
     def run_benchmark(self):
         self._grid_wo_slab()
         self._grids_w_slab()
         self._set_N_lambda()
-        self._visualize()
+        #self._visualize()
 
 class Quasi_Phase_Matching(benchmark):
     ''' reproduces paper QuasiPhaseMatching from Varin's Paper '''

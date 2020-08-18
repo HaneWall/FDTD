@@ -53,6 +53,10 @@ class Lorentz_Slab_benchmark(Case):
     def __init__(self, dir_name):
         super().__init__()
         self.path += '/harmonic_lorentz_slab/' + dir_name
+        #path_grids = os.listdir(self.path)
+
+        #self.grids = ['grid_'+str(i)+'.csv' for i in range(len(path_grids))]
+        self.grids = os.listdir(self.path)
         self.dir_name = dir_name
         self.dx = []
         self.dt = []
@@ -63,41 +67,57 @@ class Lorentz_Slab_benchmark(Case):
         self.exp_ampl = []
         self.theo_phase = []
         self.exp_phase = []
-
+        self.sorted_grids = []
         self._set_grid_information()
         self._set_data()
+        self.grid_indices = range(len(self.grids))
+        self._create_dictionary_to_sort_data()
+
 
     def _set_grid_information(self):
-        df = pd.read_csv(self.path + '/' + self.dir_name +'.csv', sep=',', header=None, nrows=1)
-        self.dx.append(float(df[1]))
-        self.timesteps.append(float(df[3]))
-        self.dt = np.array(self.dx) / c0
-        self.N_lambda.append(float(df[5]))
+        for grid in range(len(self.grids)):
+            df = pd.read_csv(self.path + '/' + self.grids[grid], sep=',', header=None, nrows=1)
+            self.dx.append(float(df[1]))
+            self.timesteps.append(float(df[3]))
+            self.dt.append(np.array(self.dx[grid]) / c0)
+            self.N_lambda.append(float(df[5]))
 
     def _set_data(self):
-        df = pd.read_csv(self.path + '/' + self.dir_name +'.csv', sep=',', header=None, skiprows=[0, 1])
-        df = df.T
-        self.width_in_dx.append(df[0])
-        self.theo_ampl.append(df[1])
-        self.exp_ampl.append(df[2])
-        self.theo_phase.append(df[3])
-        self.exp_phase.append(df[4])
+        for grid in range(len(self.grids)):
+            df = pd.read_csv(self.path + '/' + self.grids[grid], sep=',', header=None, skiprows=[0, 1])
+            df = df.T
+            self.width_in_dx.append(df[0].to_numpy().tolist())
+            self.theo_ampl.append(df[1].to_numpy().tolist())
+            self.exp_ampl.append(df[2].to_numpy().tolist())
+            self.theo_phase.append(df[3].to_numpy().tolist())
+            self.exp_phase.append(df[4].to_numpy().tolist())
+
+    def _create_dictionary_to_sort_data(self):
+        d = {key: value for (key, value) in zip(self.grid_indices, self.N_lambda)}
+        sorted_dic = dict(sorted(d.items(), key=lambda x: x[1], reverse=True))
+        self.sorted_grids = list(sorted_dic.keys())
 
     def visualize(self):
-        color_spec = [BLUE, CYAN, TEAL, RED, MAGENTA]
+        theo_ampl = True
+        theo_phase =True
+        color_spec = [CYAN, BLUE, TEAL, RED, MAGENTA]
         fig, axes = plt.subplots(nrows=1, ncols=2)
         axes[0].ticklabel_format(axis='x', style='sci', scilimits=(0, 0))
         axes[1].ticklabel_format(axis='x', style='sci', scilimits=(0, 0))
-        for grid in range(len(self.dx)):
-            axes[0].plot(self.width_in_dx[grid]*self.dx[grid], self.theo_ampl[grid], color=ORANGE, label='theory')
-            axes[0].plot(self.width_in_dx[grid]*self.dx[grid], self.exp_ampl[grid], color=color_spec[grid], linestyle='dashed',  label=r'$N_{\lambda}=$'+'{0:.3}'.format(self.N_lambda[grid]))
+        for grid in self.sorted_grids:
+            if theo_ampl:
+                axes[0].plot(np.array(self.width_in_dx[grid])*self.dx[grid], self.theo_ampl[grid], color=ORANGE, label='theory')
+                theo_ampl = False
+            axes[0].plot(np.array(self.width_in_dx[grid])*self.dx[grid], self.exp_ampl[grid], color=color_spec[grid], linestyle='dashed',  label=r'$N_{\lambda}=$'+'{0:.3}'.format(self.N_lambda[grid]))
         axes[0].grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
         axes[0].legend(loc='best')
         axes[0].set_xlabel('width in m', fontsize=14)
         axes[0].set_ylabel('transmitted amplitude ' + r'$E_{z,tr}$', fontsize=14)
-        for grid in range(len(self.dx)):
-            axes[1].plot(self.width_in_dx[grid]*self.dx[grid], self.theo_phase[grid], color=ORANGE, label='theory')
-            axes[1].plot(self.width_in_dx[grid]*self.dx[grid], self.exp_phase[grid], color=color_spec[grid], linestyle='dashed',  label=r'$N_{\lambda}=$'+'{0:.3}'.format(self.N_lambda[grid]))
+        for grid in self.sorted_grids:
+            if theo_phase:
+                axes[1].plot(np.array(self.width_in_dx[grid])*self.dx[grid], self.theo_phase[grid], color=ORANGE, label='theory')
+                theo_phase = False
+            axes[1].plot(np.array(self.width_in_dx[grid])*self.dx[grid], self.exp_phase[grid], color=color_spec[grid], linestyle='dashed',  label=r'$N_{\lambda}=$'+'{0:.3}'.format(self.N_lambda[grid]))
         axes[1].grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
         axes[1].legend(loc='best')
         axes[1].set_xlabel('width in m', fontsize=14)
@@ -212,7 +232,7 @@ class Case_qpm_harmonic_length_old(Case):
 
 #test = QPM_Length_benchmark(dir_name='testing_new_database2')
 #test.show_trace()
-lorentz_slab = Lorentz_Slab_benchmark('test2')
+lorentz_slab = Lorentz_Slab_benchmark('different_N')
 lorentz_slab.visualize()
 
 
