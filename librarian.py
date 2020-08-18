@@ -232,7 +232,7 @@ class Case_qpm_harmonic_length_old(Case):
 
 #test = QPM_Length_benchmark(dir_name='testing_new_database2')
 #test.show_trace()
-lorentz_slab = Lorentz_Slab_benchmark('different_N')
+lorentz_slab = Lorentz_Slab_benchmark('different_N_new_Lorentz')
 lorentz_slab.visualize()
 
 

@@ -93,6 +93,15 @@ class LorentzMedium(Vacuum):
         self.chi_3 = chi_3
         self.J_p_k = None
         self.P_k = None
+        self.start_of_media = None
+
+    def _allocate_J_p_k(self):
+        self.J_p_k = np.zeros(shape=(len(self.position), len(self.chi_1)))
+
+    def _allocate_P_k(self):
+        self.P_k = np.zeros(shape=(len(self.position), len(self.chi_1)))
+
+
 
     @cached_property
     def a(self):
@@ -133,39 +142,46 @@ class LorentzMedium(Vacuum):
             eps_complex += chi_1_k * (w_k ** 2) / (w_k ** 2 - omega ** 2 - 1j * gamma_k * omega)
         return eps_complex
 
-    def step_P_k(self, index, k):
-        self.P_k[index][k] = self.P_k[index][k] + self.grid.dt * self.J_p_k[index][k]
+    def step_P_k(self, relative_index, k):
+        self.P_k[relative_index][k] = self.P_k[relative_index][k] + self.grid.dt * self.J_p_k[relative_index][k]
 
-    def step_P(self, index):
-        # init new arrays to accomplish multiple lorentz poles
+    def step_P(self, grid_index):
+        #CHANGED: rewritten to allocate functions --> smaller arrays
         if self.J_p_k is None:
-            self.J_p_k = np.zeros((self.grid.nx, len(self.chi_1)))
-        if self.P_k is None:
-            self.P_k = np.zeros((self.grid.nx, len(self.chi_1)))
+            self._allocate_J_p_k()
+            self._allocate_P_k()
+            self.start_of_media = self.position[0]
+
+        # define relative_index inside media (0 = start of media)
+        relative_index = grid_index - self.start_of_media
 
         # first: step_P_k for each oscillator
-        for k in range(len(self.P_k[index])):
-            self.step_P_k(index, k)
+        for k in range(len(self.P_k[relative_index])):
+            self.step_P_k(relative_index, k)
 
         # scnd: sum P_k (each oscillator) to get total P
         sum = 0
-        for k_value in self.P_k[index]:
+        for k_value in self.P_k[relative_index]:
             sum += k_value
-        self.grid.P[index] = sum
+        self.grid.P[grid_index] = sum
 
-    def step_J_p_k(self, index, k):
-        self.J_p_k[index][k] = self.b[k] * self.J_p_k[index][k] + self.a[k]*(eps0 * np.matmul(self.chi_matrix[k], self.E_vec(index)) - self.P_k[index][k])
+    def step_J_p_k(self, relative_index, k):
+        grid_index = relative_index + self.start_of_media
+        self.J_p_k[relative_index][k] = self.b[k] * self.J_p_k[relative_index][k] + self.a[k]*(eps0 * np.matmul(self.chi_matrix[k], self.E_vec(grid_index)) - self.P_k[relative_index][k])
 
-    def step_J_p(self, index):
+    def step_J_p(self, grid_index):
+        # define relative_index
+        relative_index = grid_index - self.start_of_media
+
         # first: step_J_p_k for each oscillator
-        for k in range(len(self.J_p_k[index])):
-            self.step_J_p_k(index, k)
+        for k in range(len(self.J_p_k[relative_index])):
+            self.step_J_p_k(relative_index, k)
 
         # scnd: sum J_p_k (each oscillator) to get total J_p
         sum = 0
-        for k_value in self.J_p_k[index]:
+        for k_value in self.J_p_k[relative_index]:
             sum += k_value
-        self.grid.J_p[index] = sum
+        self.grid.J_p[grid_index] = sum
 
 class CustomMedia(Vacuum):
     # UNDER CONSTRUCTION!!!
