@@ -4,6 +4,7 @@ import os
 import numpy as np
 import pandas as pd
 from fdtd_1d.constants import c0, BLUE, CYAN, TEAL, ORANGE, RED, MAGENTA, GREY
+from matplotlib.patches import Rectangle
 
 class Case:
     ''' creates a bunch of informations about the file of interest in "saved_data" '''
@@ -143,12 +144,14 @@ class QPM_Length_benchmark(Case):
         self.second_har = 2 * self.first_har
         self.zero_padding = zero_padding
         self.positions = []
+        self.fft_window = []
 
         self._set_grid_information()
         self._set_observer_positions()
         self._set_merge_data()
         self._recreate_fft()
         self.relative_width = (np.array(self.positions) - 5) * self.dx
+
 
 
     def _set_observer_positions(self):
@@ -173,23 +176,57 @@ class QPM_Length_benchmark(Case):
             collected_df[ind] = indv_df[0]
         self.merged_data = collected_df.to_numpy()
 
+    def set_fft_limits(self, past_from_max, future_from_max):
+        for ind in range(len(self.positions)):
+            merged_transpose = np.transpose(self.merged_data)
+            abs_obs = np.abs(merged_transpose[ind])
+            observer_max_ts = np.argmax(abs_obs)
+            self.fft_window.append([observer_max_ts-past_from_max, observer_max_ts+future_from_max])
+        self._recreate_fft()
+
     def show_trace(self):
-        im = plt.imshow(self.merged_data**2, cmap='magma', aspect='auto')
+        fig, axes = plt.subplots()
+        im = axes.imshow(self.merged_data**2, cmap='magma', aspect='auto')
+        if self.fft_window:
+            for obs_ind in range(len(self.positions)):
+                fft_rect = Rectangle(xy=(obs_ind-0.5, self.fft_window[obs_ind][1]), height=
+                                     -(self.fft_window[obs_ind][1]-self.fft_window[obs_ind][0]), width=1,
+                                     facecolor='none', edgecolor='white')
+                axes.add_patch(fft_rect)
         plt.colorbar(im, orientation='horizontal')
         plt.show()
 
     def _recreate_fft(self):
-        x, y = np.shape(self.merged_data)
         padded_data = []
-        timestep_duration = self.timesteps + self.zero_padding
-        self.omega = 2 * np.pi * np.linspace(0, 1 / (2 * self.dt), timestep_duration // 2) / self.first_har
-        for obs_ind in range(x):
-            padded_data.append(np.pad(self.merged_data[obs_ind], (0, self.zero_padding), 'constant', constant_values=0))
-            data_fft = np.fft.fft(padded_data[obs_ind])
-            self.abs_fft.append(2/timestep_duration * np.abs(data_fft))
-            self.abs_fft_sqrd.append(np.array(self.abs_fft[obs_ind]) ** 2)
-            abs_fft_sqrd_max = np.max(self.abs_fft_sqrd[obs_ind])
-            self.normalized_abs_fft_sqrd.append(np.array(self.abs_fft_sqrd[obs_ind])/abs_fft_sqrd_max)
+        if not self.fft_window:                 # fft_window empty
+            x, y = np.shape(self.merged_data)
+            timestep_duration = self.timesteps + self.zero_padding
+            self.omega = 2 * np.pi * np.linspace(0, 1 / (2 * self.dt), timestep_duration // 2) / self.first_har
+            for obs_ind in range(x):
+                padded_data.append(np.pad(self.merged_data[obs_ind], (0, self.zero_padding), 'constant', constant_values=0))
+                data_fft = np.fft.fft(padded_data[obs_ind])
+                self.abs_fft.append(2/timestep_duration * np.abs(data_fft))
+                self.abs_fft_sqrd.append(np.array(self.abs_fft[obs_ind]) ** 2)
+                abs_fft_sqrd_max = np.max(self.abs_fft_sqrd[obs_ind])
+                self.normalized_abs_fft_sqrd.append(np.array(self.abs_fft_sqrd[obs_ind])/abs_fft_sqrd_max)
+
+        else:
+            self.abs_fft = []
+            self.abs_fft_sqrd = []
+            self.normalized_abs_fft = []
+            self.normalized_abs_fft_sqrd = []
+            x, y = np.shape(self.merged_data)
+            timestep_duration = self.fft_window[0][1] - self.fft_window[0][0] + self.zero_padding
+            self.omega = 2 * np.pi * np.linspace(0, 1 / (2 * self.dt), timestep_duration // 2) / self.first_har
+            for obs_ind in range(x):
+                padded_data.append(
+                    np.pad(self.merged_data[obs_ind], (0, self.zero_padding), 'constant', constant_values=0))
+                data_fft = np.fft.fft(padded_data[obs_ind])
+                self.abs_fft.append(2 / timestep_duration * np.abs(data_fft))
+                self.abs_fft_sqrd.append(np.array(self.abs_fft[obs_ind]) ** 2)
+                abs_fft_sqrd_max = np.max(self.abs_fft_sqrd[obs_ind])
+                self.normalized_abs_fft_sqrd.append(np.array(self.abs_fft_sqrd[obs_ind]) / abs_fft_sqrd_max)
+
 
 class Case_qpm_harmonic_length_old(Case):
     ''' reconstructs a bunch of information about a file of interest created by a qpm_harmonic benchmark'''
@@ -230,10 +267,13 @@ class Case_qpm_harmonic_length_old(Case):
         self.normalized_abs_fft_sqrd = self.abs_fft_sqrd / abs_fft_sqrd_max
 
 
-#test = QPM_Length_benchmark(dir_name='testing_new_database2')
-#test.show_trace()
-lorentz_slab = Lorentz_Slab_benchmark('different_N_new_Lorentz')
-lorentz_slab.visualize()
+test = QPM_Length_benchmark(dir_name='six_lambda_30000_courant_1_timestep_peak_8000_analyze_shg_even_smaller_peak', zero_padding=9000)
+test.set_fft_limits(past_from_max=8000, future_from_max=8000)
+test.show_trace()
+
+
+#lorentz_slab = Lorentz_Slab_benchmark('different_N_new_Lorentz')
+#lorentz_slab.visualize()
 
 
 '''Case0 = Case_qpm_harmonic_length(filename='P_testing_benchmark_obj.csv', zero_padding=80000)
