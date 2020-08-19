@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 from fdtd_1d.constants import c0, BLUE, CYAN, TEAL, ORANGE, RED, MAGENTA, GREY
 from matplotlib.patches import Rectangle
+from matplotlib.colors import LogNorm
+from matplotlib import ticker
 
 class Case:
     ''' creates a bunch of informations about the file of interest in "saved_data" '''
@@ -135,11 +137,15 @@ class QPM_Length_benchmark(Case):
         self.dx = None
         self.timesteps = None
         self.merged_data = None
+        self.windowed_merged_data = None
+
+        self.padded_data = []
         self.abs_fft = []
         self.abs_fft_sqrd = []
         self.normalized_abs_fft = []
         self.normalized_abs_fft_sqrd = []
 
+        self.omega = None
         self.first_har = 1.77306e15
         self.second_har = 2 * self.first_har
         self.zero_padding = zero_padding
@@ -174,19 +180,20 @@ class QPM_Length_benchmark(Case):
             indv_df = pd.read_csv(self.path+'/E_'+str(pos)+'.csv', sep=',', header=None, skiprows=[0])
             indv_df = indv_df.T
             collected_df[ind] = indv_df[0]
-        self.merged_data = collected_df.to_numpy()
+        self.merged_data = np.transpose(collected_df.to_numpy())
 
     def set_fft_limits(self, past_from_max, future_from_max):
+        self.windowed_merged_data = np.zeros(shape=(len(self.positions), (past_from_max + future_from_max + 1)))
         for ind in range(len(self.positions)):
-            merged_transpose = np.transpose(self.merged_data)
-            abs_obs = np.abs(merged_transpose[ind])
+            abs_obs = np.abs(self.merged_data[ind])
             observer_max_ts = np.argmax(abs_obs)
             self.fft_window.append([observer_max_ts-past_from_max, observer_max_ts+future_from_max])
+            self.windowed_merged_data[ind] = self.padded_data[ind][self.fft_window[ind][0]:self.fft_window[ind][1]+1]
         self._recreate_fft()
 
     def show_trace(self):
         fig, axes = plt.subplots()
-        im = axes.imshow(self.merged_data**2, cmap='magma', aspect='auto')
+        im = axes.imshow(np.transpose(self.merged_data)**2, cmap='magma', aspect='auto')
         if self.fft_window:
             for obs_ind in range(len(self.positions)):
                 fft_rect = Rectangle(xy=(obs_ind-0.5, self.fft_window[obs_ind][1]), height=
@@ -197,15 +204,15 @@ class QPM_Length_benchmark(Case):
         plt.show()
 
     def _recreate_fft(self):
-        padded_data = []
+        self.padded_data = []
         if not self.fft_window:                 # fft_window empty
             x, y = np.shape(self.merged_data)
             timestep_duration = self.timesteps + self.zero_padding
             self.omega = 2 * np.pi * np.linspace(0, 1 / (2 * self.dt), timestep_duration // 2) / self.first_har
             for obs_ind in range(x):
-                padded_data.append(np.pad(self.merged_data[obs_ind], (0, self.zero_padding), 'constant', constant_values=0))
-                data_fft = np.fft.fft(padded_data[obs_ind])
-                self.abs_fft.append(2/timestep_duration * np.abs(data_fft))
+                self.padded_data.append(np.pad(self.merged_data[obs_ind], (0, self.zero_padding), 'constant', constant_values=0))
+                data_fft = np.fft.fft(self.padded_data[obs_ind])
+                self.abs_fft.append(2/timestep_duration * np.abs(data_fft[0:timestep_duration // 2]))
                 self.abs_fft_sqrd.append(np.array(self.abs_fft[obs_ind]) ** 2)
                 abs_fft_sqrd_max = np.max(self.abs_fft_sqrd[obs_ind])
                 self.normalized_abs_fft_sqrd.append(np.array(self.abs_fft_sqrd[obs_ind])/abs_fft_sqrd_max)
@@ -215,18 +222,30 @@ class QPM_Length_benchmark(Case):
             self.abs_fft_sqrd = []
             self.normalized_abs_fft = []
             self.normalized_abs_fft_sqrd = []
+
             x, y = np.shape(self.merged_data)
             timestep_duration = self.fft_window[0][1] - self.fft_window[0][0] + self.zero_padding
             self.omega = 2 * np.pi * np.linspace(0, 1 / (2 * self.dt), timestep_duration // 2) / self.first_har
             for obs_ind in range(x):
-                padded_data.append(
-                    np.pad(self.merged_data[obs_ind], (0, self.zero_padding), 'constant', constant_values=0))
-                data_fft = np.fft.fft(padded_data[obs_ind])
-                self.abs_fft.append(2 / timestep_duration * np.abs(data_fft))
+                self.padded_data.append(
+                    np.pad(self.windowed_merged_data[obs_ind], (0, self.zero_padding), 'constant', constant_values=0))
+                data_fft = np.fft.fft(self.padded_data[obs_ind])
+                self.abs_fft.append(2 / timestep_duration * np.abs(data_fft[0:timestep_duration // 2]))
                 self.abs_fft_sqrd.append(np.array(self.abs_fft[obs_ind]) ** 2)
                 abs_fft_sqrd_max = np.max(self.abs_fft_sqrd[obs_ind])
                 self.normalized_abs_fft_sqrd.append(np.array(self.abs_fft_sqrd[obs_ind]) / abs_fft_sqrd_max)
+            print(np.shape(self.normalized_abs_fft_sqrd))
 
+    def visualize_over_frequencies(self):
+        x = self.relative_width
+        y = self.omega
+        X, Y = np.meshgrid(x, y)
+        fig, axes = plt.subplots()
+        c = axes.contourf(X, Y, np.transpose(self.normalized_abs_fft_sqrd), levels=[1e-10, 1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1e0], locator=ticker.LogLocator(), cmap='YlOrBr', norm=LogNorm())
+        #fig, axes = plt.subplots()
+        #im = axes.imshow(self.normalized_abs_fft_sqrd, cmap='magma', aspect='auto')
+        plt.colorbar(c, orientation='horizontal')
+        plt.show()
 
 class Case_qpm_harmonic_length_old(Case):
     ''' reconstructs a bunch of information about a file of interest created by a qpm_harmonic benchmark'''
@@ -269,7 +288,7 @@ class Case_qpm_harmonic_length_old(Case):
 
 test = QPM_Length_benchmark(dir_name='six_lambda_30000_courant_1_timestep_peak_8000_analyze_shg_even_smaller_peak', zero_padding=9000)
 test.set_fft_limits(past_from_max=8000, future_from_max=8000)
-test.show_trace()
+test.visualize_over_frequencies()
 
 
 #lorentz_slab = Lorentz_Slab_benchmark('different_N_new_Lorentz')
