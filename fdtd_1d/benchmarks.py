@@ -34,6 +34,7 @@ def theory_dielectric_slab(grid):
     return theo_amplitude, theo_phasenunterschied
 
 
+
 class benchmark:
     '''Parent class for all benchmarks. Declares path/directory to store data'''
 

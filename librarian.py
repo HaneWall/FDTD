@@ -234,16 +234,18 @@ class QPM_Length_benchmark(Case):
                 self.abs_fft_sqrd.append(np.array(self.abs_fft[obs_ind]) ** 2)
                 abs_fft_sqrd_max = np.max(self.abs_fft_sqrd[obs_ind])
                 self.normalized_abs_fft_sqrd.append(np.array(self.abs_fft_sqrd[obs_ind]) / abs_fft_sqrd_max)
-            print(np.shape(self.normalized_abs_fft_sqrd))
 
     def visualize_over_frequencies(self):
         x = self.relative_width
         y = self.omega
         X, Y = np.meshgrid(x, y)
         fig, axes = plt.subplots()
-        c = axes.contourf(X, Y, np.transpose(self.normalized_abs_fft_sqrd), levels=[1e-10, 1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1e0], locator=ticker.LogLocator(), cmap='YlOrBr', norm=LogNorm())
+        c = axes.contourf(X, Y, np.transpose(self.normalized_abs_fft_sqrd), levels=20, locator=ticker.LogLocator(), cmap='magma', norm=LogNorm())
         #fig, axes = plt.subplots()
         #im = axes.imshow(self.normalized_abs_fft_sqrd, cmap='magma', aspect='auto')
+        axes.set_xlabel('Distanz in m')
+        axes.set_ylabel('Harmonische')
+        plt.ticklabel_format(style='sci', axis='x', scilimits=(0, 0))
         plt.colorbar(c, orientation='horizontal')
         plt.show()
 
@@ -288,6 +290,7 @@ class Case_qpm_harmonic_length_old(Case):
 
 test = QPM_Length_benchmark(dir_name='six_lambda_30000_courant_1_timestep_peak_8000_analyze_shg_even_smaller_peak', zero_padding=9000)
 test.set_fft_limits(past_from_max=8000, future_from_max=8000)
+test.show_trace()
 test.visualize_over_frequencies()
 
 
