@@ -105,18 +105,16 @@ class LorentzMedium(Vacuum):
 
     @cached_property
     def a(self):
-        a_list = []
-        for w_k, gamma_k in zip(self.w_0, self.gamma):
-            a_list.append((self.grid.dt * w_k**2) / (1 + gamma_k/2 * self.grid.dt))
-        a = np.array(a_list)
+        a = np.zeros(len(self.w_0))
+        for w_k, gamma_k, ind in zip(self.w_0, self.gamma, range(len(self.w_0))):
+            a[ind] = (self.grid.dt * w_k**2) / (1 + gamma_k/2 * self.grid.dt)
         return a
 
     @cached_property
     def b(self):
-        b_list = []
-        for gamma_k in self.gamma:
-            b_list.append((1 - gamma_k/2 * self.grid.dt) / (1 + gamma_k/2 * self.grid.dt))
-        b = np.array(b_list)
+        b = np.zeros(len(self.w_0))
+        for gamma_k, ind in zip(self.gamma, range(len(self.w_0))):
+            b[ind] = (1 - gamma_k/2 * self.grid.dt) / (1 + gamma_k/2 * self.grid.dt)
         return b
 
     @cached_property

@@ -5,9 +5,9 @@ setup = f.Harmonic_Slab_Setup(dx=4.e-09, length_grid_in_dx=40, length_media_in_d
 setup.run_benchmark()
 #setup_2 = f.TiO2_Si02_Dielectric_Mirror_Setup(N_lambda_media=25, wavelength_guided_for=800.e-09, wavelength=800e-09, ampl=1, timesteps=15000, number_of_layer_pairs=15, vary_layers=True, vary_inc_wavelength=False)
 #setup_2.run_benchmark()
-'''setup_3 = f.Harmonic_Slab_Lorentz_Setup(name='new_lorentz_implementation', dx=[4/6 * 3.91e-07], length_grid_in_dx=[50], length_media_in_dx=[30], start_index_media=5, wavelength=1.75e-05, eps_inf=1.5, chi_1=[5.1], chi_2=[0], chi_3=[0], conductivity=0, w0=[1.2566e14], gamma=[8e12], ampl=1, timesteps=[6000])
-setup_3.run_benchmark()
-setup_3.store_obs_data()'''
+#setup_3 = f.Harmonic_Slab_Lorentz_Setup(name='new_numpy', dx=[4/6 * 3.91e-07], length_grid_in_dx=[50], length_media_in_dx=[30], start_index_media=5, wavelength=1.75e-05, eps_inf=1.5, chi_1=[5.1], chi_2=[0], chi_3=[0], conductivity=0, w0=[1.2566e14], gamma=[8e12], ampl=1, timesteps=[6000])
+#setup_3.run_benchmark()
+#setup_3.store_obs_data()
 
 #setup_3 = f.Harmonic_Slab_Lorentz_Setup(name='different_N_new_Lorentz_new_arrays', dx=[2/6 * 3.91e-07, 4/6 * 3.91e-07, 6/6 * 3.91e-07], length_grid_in_dx=[100, 55, 40], length_media_in_dx=[90, 45, 30], start_index_media=5, wavelength=1.75e-05, eps_inf=1.05, chi_1=[2.1, 2.4], chi_2=[0, 0], chi_3=[0, 0], conductivity=0, w0=[1.2566e14, 1.2e13], gamma=[8e12, 9e14], ampl=1, timesteps=[15000, 7500, 5000], courant=1)
 #setup_3.run_benchmark()

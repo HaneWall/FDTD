@@ -34,6 +34,7 @@ class Grid:
         self.timesteps_passed = 0
         self.grid_name = name               # needed if benchmarks create multiple grids (distinguish them)
         self.benchmark_type = benchmark     # some objects have to know which kind of benchmark is processed to work properly
+        self.all_mat_slices = []
         self.all_E_mats = set()
         self.sources = []                   # saving source.py-objects
         self.materials = []                 # saving material.py-objects
@@ -131,15 +132,10 @@ class Grid:
     def cb(self):                            # Taflove convention
         return 1 / (1 + (self.conductivity * self.dt) / (2 * eps0 * self.eps))
 
-    ''' def step_Ez(self, cell):
-        self.Ez[cell] = self.ca(cell) * self.Ez[cell] + self.dt / (eps0 * self.eps[cell]) * self.cb(cell) * (
-                    curl_Hy(self.Hy, cell) / self.dx - self.J_p[cell])'''
 
     def step_Ez(self):
         self.Ez[1:self.nx] = self.ca[1:self.nx] * self.Ez[1:self.nx] + self.dt / (eps0 * self.eps[1:self.nx]) * self.cb[1:self.nx] * (self.curl_Hy()/self.dx - self.J_p[1:self.nx])
 
-    '''def step_Hy(self, cell):
-        self.Hy[cell] = self.Hy[cell] + self.dt / (mu0 * self.mu[cell] * self.dx) * curl_Ez(self.Ez, cell)'''
 
     def step_Hy(self):
         self.Hy[0:self.nx-1] = self.Hy[0:self.nx-1] + self.dt/(mu0 * self.mu[0:self.nx-1] * self.dx) * self.curl_Ez()
@@ -148,7 +144,7 @@ class Grid:
     def update(self):
         # note that steps are dependent on object
         # updating polarisation P
-        for index in self.all_E_mats:
+        for index in self.all_E_mats:               #TODO: is there an magnificant matrix multiplicaton thingy (Way WAY faster)?
             for mat in self.materials:
                 if index in mat.position:
                     mat.step_P(index)
@@ -157,7 +153,7 @@ class Grid:
         for bound in self.boundaries:
             bound.save_Ez()
 
-        # updating E - field, index [1,last cell]  #TODO use numpy arrays
+        # updating E - field, index [1,last cell]
         self.step_Ez()
 
         # updating E - Sources

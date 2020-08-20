@@ -163,52 +163,53 @@ class Harmonic_Slab_Lorentz_Setup(benchmark):
                     self.eps_real = w_grid.materials[0].epsilon_real(w_grid.sources[0].omega)
                     self.eps_imag = w_grid.materials[0].epsilon_imag(w_grid.sources[0].omega)
                     self.eps_complex = w_grid.materials[0].epsilon_complex(w_grid.sources[0].omega)
-                    self.n_real = np.sqrt((np.abs(self.eps_complex[0]) + self.eps_real[0])/2)
+                    self.n_real = np.sqrt((np.abs(self.eps_complex) + self.eps_real)/2)
+                    print(self.n_real)
 
 
     def _visualize(self):
         fig, axes = plt.subplots(2, 2)
-        fig.suptitle(r'$n_{real}=$'+'{0:.3}'.format(self.n_real) + r'     $N_{\lambda_{media}}=$' + '{0:.3}'.format(self.lamb/(self.dx*self.n_real)), fontsize=20)
+        #fig.suptitle(r'$n_{real}=$'+'{0:.3}'.format(self.n_real) + r'     $N_{\lambda_{media}}=$' + '{0:.3}'.format(self.N_lambda), fontsize=20)
         axes[0][0].plot(np.array(self.indices) - self.start_media, np.array(self.theo_amplitude), label='theorie', color=ORANGE, alpha=1)
         axes[0][0].grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
         axes[0][0].plot(np.array(self.indices) - self.start_media, np.array(self.exp_amplitude), label='FDTD', linestyle='dashed', color=TEAL, alpha=1)
         axes[0][0].legend(loc='best')
         axes[0][0].set_xlabel('Breite des Mediums in ' + r'$\Delta_x$', fontsize=14)
         axes[0][0].set_ylabel('Transmittierte Amplitude ' + r'$Ez_{tr}$', fontsize=14)
-        axes[0][0].set_xlim([0, self.length_media + 1])
+        axes[0][0].set_xlim([0, self.length_media[0] + 1])
         axes[0][1].plot(np.array(self.indices) - self.start_media, np.array(self.theo_amplitude) / np.array(self.exp_amplitude), color=TEAL)
         axes[0][1].set_ylabel(r'$E_{tr,theo}$ / $E_{tr,FDTD}$', fontsize=14)
         axes[0][1].set_xlabel('Breite des Mediums in ' + r'$\Delta_x$', fontsize=14)
         axes[0][1].grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
-        axes[0][1].set_xlim([0, self.length_media + 1])
+        axes[0][1].set_xlim([0, self.length_media[0] + 1])
         axes[1][0].set_ylabel('Phasenunterschied', fontsize=14)
         axes[1][0].plot(np.array(self.indices) - self.start_media, self.theo_phasenunterschied, label='theorie', color=ORANGE, alpha=1)
         axes[1][0].set_xlabel('Breite des Mediums in ' + r'$\Delta_x$', fontsize=14)
         axes[1][0].grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
         axes[1][0].plot(np.array(self.indices) - self.start_media, self.get_exp_phasedifference(), color=TEAL, linestyle='dashed',
                         label='FDTD', alpha=1)
-        axes[1][0].set_xlim([0, self.length_media + 1])
+        axes[1][0].set_xlim([0, self.length_media[0] + 1])
         axes[1][0].legend()
         axes[1][1].set_xlabel('Breite des Mediums in ' + r'$\Delta_x$', fontsize=14)
         axes[1][1].set_ylabel(r'$d(\phi_{exp},\phi_{theo})$', fontsize=14)
         axes[1][1].plot(np.array(self.indices) - self.start_media,
                         np.abs(self.get_exp_phasedifference() - np.array(self.theo_phasenunterschied)), color=TEAL)
         axes[1][1].grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
-        axes[1][1].set_xlim([0, self.length_media + 1])
+        axes[1][1].set_xlim([0, self.length_media[0] + 1])
         plt.show()
 
     def get_exp_phasedifference(self):
-        phase_diff = [[] for _ in range(len(self.dx))]
+        phase_diff = np.zeros(len(self.dx))
         for grid in range(len(self.dx)):
             phase_diff[grid] = -np.array(self.exp_phase[grid]) + self.wo_phase[grid]
-            for index in range(len(phase_diff[grid])):
+            for index in phase_diff[grid]:
                 if phase_diff[grid][index] > np.pi:
                     phase_diff[grid][index] -= 2*np.pi
         return phase_diff
 
     def _set_N_lambda(self):
         for grid in range(len(self.dx)):
-            self.N_lambda[grid] = self.lamb/(self.dx[grid]*self.n_real[0])
+            self.N_lambda[grid] = self.lamb/(self.dx[grid]*self.n_real)
 
     def store_obs_data(self):
         self.allocate_directory()
