@@ -1,40 +1,40 @@
 import fdtd_1d as f
 
 # Load setup/benchmark:
-#setup = f.Harmonic_Slab_Setup(dx=4.e-09, length_grid_in_dx=40, length_media_in_dx=30, start_index_media=5, wavelength=240.e-09, epsilon=4, ampl=1, timesteps=2000)
-#setup.run_benchmark()
+setup = f.Harmonic_Slab_Setup(dx=4.e-09, length_grid_in_dx=40, length_media_in_dx=30, start_index_media=5, wavelength=240.e-09, epsilon=4, ampl=1, timesteps=10000)
+setup.run_benchmark()
 #setup_2 = f.TiO2_Si02_Dielectric_Mirror_Setup(N_lambda_media=25, wavelength_guided_for=800.e-09, wavelength=800e-09, ampl=1, timesteps=15000, number_of_layer_pairs=15, vary_layers=True, vary_inc_wavelength=False)
 #setup_2.run_benchmark()
 '''setup_3 = f.Harmonic_Slab_Lorentz_Setup(name='new_lorentz_implementation', dx=[4/6 * 3.91e-07], length_grid_in_dx=[50], length_media_in_dx=[30], start_index_media=5, wavelength=1.75e-05, eps_inf=1.5, chi_1=[5.1], chi_2=[0], chi_3=[0], conductivity=0, w0=[1.2566e14], gamma=[8e12], ampl=1, timesteps=[6000])
 setup_3.run_benchmark()
 setup_3.store_obs_data()'''
 
-#setup_3 = f.Harmonic_Slab_Lorentz_Setup(name='different_N_new_Lorentz', dx=[2/6 * 3.91e-07, 4/6 * 3.91e-07, 6/6 * 3.91e-07], length_grid_in_dx=[100, 55, 40], length_media_in_dx=[90, 45, 30], start_index_media=5, wavelength=1.75e-05, eps_inf=1.05, chi_1=[2.1, 2.4], chi_2=[0, 0], chi_3=[0, 0], conductivity=0, w0=[1.2566e14, 1.2e13], gamma=[8e12, 9e14], ampl=1, timesteps=[15000, 7500, 5000], courant=1)
+#setup_3 = f.Harmonic_Slab_Lorentz_Setup(name='different_N_new_Lorentz_new_arrays', dx=[2/6 * 3.91e-07, 4/6 * 3.91e-07, 6/6 * 3.91e-07], length_grid_in_dx=[100, 55, 40], length_media_in_dx=[90, 45, 30], start_index_media=5, wavelength=1.75e-05, eps_inf=1.05, chi_1=[2.1, 2.4], chi_2=[0, 0], chi_3=[0, 0], conductivity=0, w0=[1.2566e14, 1.2e13], gamma=[8e12, 9e14], ampl=1, timesteps=[15000, 7500, 5000], courant=1)
 #setup_3.run_benchmark()
-#setup_3.store_obs_data()
 
-setup_4 = f.Quasi_Phase_Matching(number_of_lambdas=6, timesteps=30000, courant=1, name='six_lambda_30000_courant_1_timestep_peak_8000_analyze_shg_even_smaller_peak', peak_timestep=8000, mode='length', distrubuted_observer=300)
-setup_4.run_benchmark()
-setup_4.store_obs_data()
+
+#setup_4 = f.Quasi_Phase_Matching(number_of_lambdas=6, timesteps=30000, courant=1, name='six_lambda_30000_courant_1_timestep_peak_8000_analyze_shg_even_smaller_peak', peak_timestep=8000, mode='length', distrubuted_observer=300)
+#setup_4.run_benchmark()
+#setup_4.store_obs_data()
 
 #setup_5 = f.Quasi_Phase_Matching(number_of_lambdas=3, timesteps=30, courant=1, name='testing_new_database2', peak_timestep=8000, mode='length')
 #setup_5.run_benchmark()
 #setup_5.store_obs_data()
 
-'''
 
+'''
 # Or build your own setup
 
 # Step 1: init grid
 test = f.Grid(50, 4e-09) # creates 201 grid cells (á 4.0e-09m)
 
 # Step 2: init media
-#test[30:80] = f.NonDispersiveMedia(name='Media4Epsleft', permeability=1, permittivity=3, conductivity=0)
+#test[20:40] = f.NonDispersiveMedia(name='Media4Epsleft', permeability=1, permittivity=3, conductivity=0)
 #test[30:60] = f.LorentzMedium(name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0], chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
 
 
-test[15:30] = f.LorentzMedium(name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0], chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
-test[30:45] = f.LorentzMedium(name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[-30.e-12, 0, 0], chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
+#test[15:30] = f.LorentzMedium(name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0], chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
+#test[30:45] = f.LorentzMedium(name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[-30.e-12, 0, 0], chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
 #test[871:1722] = f.LorentzMedium(name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[-30.e-12, 0, 0], chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
 #test[1723:2574] = f.LorentzMedium(name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0], chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
 #test[2574:3425] = f.LorentzMedium(name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[-30.e-12, 0, 0], chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
@@ -59,8 +59,8 @@ test[30:45] = f.LorentzMedium(name='Varin', permeability=1, eps_inf=1.05, chi_1=
 #test[10] = f.EnvelopeSinus(name='test', wavelength=1.064e-06, fwhm=14.6e-06, amplitude=2*2.74492e7, phase_shift=0, peak_timestep=16000, tfsf=True)
 
 #test[3] = f.EnvelopeSinus(name='test', wavelength=1.064e-06, fwhm=14.6e-06, amplitude=2*2.74492e7, phase_shift=0, peak_timestep=9000, tfsf=True)
-test[5] = f.GaussianImpulse(name='test', amplitude=1, peak_timestep=200, fwhm=30e-09, tfsf=True)
-
+test[25] = f.GaussianImpulse(name='test', amplitude=1, peak_timestep=100, fwhm=30e-09, tfsf=False)
+#test[5] = f.GaussianImpulse(name='test', amplitude=1, peak_timestep=5000, fwhm=30e-09/5, tfsf=True)
 
 # Step 4: add observer
 
@@ -78,7 +78,7 @@ test[0] = f.LeftSideMur()
 test[49] = f.RightSideMur()
     
 # Step 6: run simulation
-test.animate_timesteps(timesteps=10000)
+test.animate_timesteps(10000)
 #test.animate_timesteps(60000)
 
 # Step 7: misc

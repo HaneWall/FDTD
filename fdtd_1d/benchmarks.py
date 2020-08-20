@@ -71,7 +71,7 @@ class Harmonic_Slab_Lorentz_Setup(benchmark):
         self.lamb = wavelength
         self.timesteps = timesteps
         self.courant = courant
-        self.N_lambda = [[] for _ in range(len(self.dx))]
+        self.N_lambda = np.zeros(len(self.dx))                                                             #[[] for _ in range(len(self.dx))]
         self.ampl = ampl
         self.conductivity = conductivity
         self.gamma = gamma
@@ -79,18 +79,16 @@ class Harmonic_Slab_Lorentz_Setup(benchmark):
         self.chi_1 = chi_1
         self.chi_2 = chi_2
         self.chi_3 = chi_3
-        self.wo_phase = [[] for _ in range(len(self.dx))]
-        self.theo_phasenunterschied = [[] for _ in range(len(self.dx))]
-        self.theo_amplitude = [[] for _ in range(len(self.dx))]
-        self.exp_phase = [[] for _ in range(len(self.dx))]
-        self.exp_amplitude = [[] for _ in range(len(self.dx))]
-        self.eps_real = []
-        self.eps_imag = []
-        self.eps_complex = []
-        self.n_real = []
+        self.wo_phase = np.zeros(len(self.dx))                                                            #[[] for _ in range(len(self.dx))]
+        self.theo_phasenunterschied = np.zeros(len(self.dx))
+        self.theo_amplitude = np.zeros(len(self.dx))
+        self.exp_phase = np.zeros(len(self.dx))
+        self.exp_amplitude = np.zeros(len(self.dx))
+        self.eps_real = None
+        self.eps_imag = None
+        self.eps_complex = None
+        self.n_real = None
 
-
-        self.allocate_directory()
 
     def _grid_wo_slab(self):
         position_src = self.start_media - 1
@@ -116,7 +114,7 @@ class Harmonic_Slab_Lorentz_Setup(benchmark):
                 wo_grid[end_mur] = f.RightSideMur()
 
             wo_grid.run_timesteps(self.timesteps[grid], vis=False)
-            self.wo_phase[grid].append(wo_grid.local_observers[0].phase)
+            self.wo_phase[grid] = wo_grid.local_observers[0].phase
 
     def _grids_w_slab(self):
         position_src = self.start_media - 1
@@ -156,21 +154,21 @@ class Harmonic_Slab_Lorentz_Setup(benchmark):
                 w_grid.run_timesteps(timesteps=self.timesteps[grid], vis=False)
 
                 # Step 7: misc
-                self.exp_amplitude[grid].append(w_grid.local_observers[0].amplitude)
-                self.exp_phase[grid].append(w_grid.local_observers[0].phase)
-                self.theo_amplitude[grid].append(theory_dielectric_slab_complex(w_grid)[0])
-                self.theo_phasenunterschied[grid].append(theory_dielectric_slab_complex(w_grid)[1])
+                self.exp_amplitude[grid] = w_grid.local_observers[0].amplitude
+                self.exp_phase[grid] = w_grid.local_observers[0].phase
+                self.theo_amplitude[grid] = theory_dielectric_slab_complex(w_grid)[0]
+                self.theo_phasenunterschied[grid] = theory_dielectric_slab_complex(w_grid)[1]
                 # if list self.eps_real is empty:
-                if not self.eps_real:
-                    self.eps_real.append(w_grid.materials[0].epsilon_real(w_grid.sources[0].omega))
-                    self.eps_imag.append(w_grid.materials[0].epsilon_imag(w_grid.sources[0].omega))
-                    self.eps_complex.append(w_grid.materials[0].epsilon_complex(w_grid.sources[0].omega))
-                    self.n_real.append(np.sqrt((np.abs(self.eps_complex[0]) + self.eps_real[0])/2))
+                if self.eps_real is None:
+                    self.eps_real = w_grid.materials[0].epsilon_real(w_grid.sources[0].omega)
+                    self.eps_imag = w_grid.materials[0].epsilon_imag(w_grid.sources[0].omega)
+                    self.eps_complex = w_grid.materials[0].epsilon_complex(w_grid.sources[0].omega)
+                    self.n_real = np.sqrt((np.abs(self.eps_complex[0]) + self.eps_real[0])/2)
 
 
     def _visualize(self):
         fig, axes = plt.subplots(2, 2)
-        fig.suptitle(r'$n_{real}=$'+'{0:.3}'.format(self.n_real[0]) + r'     $N_{\lambda_{media}}=$' + '{0:.3}'.format(self.lamb/(self.dx*self.n_real[0])), fontsize=20)
+        fig.suptitle(r'$n_{real}=$'+'{0:.3}'.format(self.n_real) + r'     $N_{\lambda_{media}}=$' + '{0:.3}'.format(self.lamb/(self.dx*self.n_real)), fontsize=20)
         axes[0][0].plot(np.array(self.indices) - self.start_media, np.array(self.theo_amplitude), label='theorie', color=ORANGE, alpha=1)
         axes[0][0].grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
         axes[0][0].plot(np.array(self.indices) - self.start_media, np.array(self.exp_amplitude), label='FDTD', linestyle='dashed', color=TEAL, alpha=1)
@@ -213,6 +211,7 @@ class Harmonic_Slab_Lorentz_Setup(benchmark):
             self.N_lambda[grid] = self.lamb/(self.dx[grid]*self.n_real[0])
 
     def store_obs_data(self):
+        self.allocate_directory()
         '''
         :return:
         2 rows of basic information and structure
@@ -238,7 +237,7 @@ class Harmonic_Slab_Lorentz_Setup(benchmark):
         self._grid_wo_slab()
         self._grids_w_slab()
         self._set_N_lambda()
-        #self._visualize()
+        self._visualize()
 
 class Quasi_Phase_Matching(benchmark):
     ''' reproduces paper QuasiPhaseMatching from Varin's Paper '''
