@@ -7,6 +7,10 @@ from fdtd_1d.constants import c0, BLUE, CYAN, TEAL, ORANGE, RED, MAGENTA, GREY
 from matplotlib.patches import Rectangle
 from matplotlib.colors import LogNorm
 from matplotlib import ticker
+from werkzeug.utils import cached_property
+
+
+color_spec = [BLUE, CYAN, TEAL, ORANGE, RED, MAGENTA, GREY]
 
 class Case:
     ''' creates a bunch of informations about the file of interest in "saved_data" '''
@@ -56,75 +60,58 @@ class Lorentz_Slab_benchmark(Case):
     def __init__(self, dir_name):
         super().__init__()
         self.path += '/harmonic_lorentz_slab/' + dir_name
-        #path_grids = os.listdir(self.path)
-
-        #self.grids = ['grid_'+str(i)+'.csv' for i in range(len(path_grids))]
         self.grids = os.listdir(self.path)
         self.dir_name = dir_name
-        self.dx = []
-        self.dt = []
-        self.timesteps = []
-        self.N_lambda = []
-        self.width_in_dx = []
-        self.theo_ampl = []
-        self.exp_ampl = []
-        self.theo_phase = []
-        self.exp_phase = []
-        self.sorted_grids = []
-        self._set_grid_information()
-        self._set_data()
-        self.grid_indices = range(len(self.grids))
-        self._create_dictionary_to_sort_data()
+        self._load_data()
 
 
-    def _set_grid_information(self):
-        for grid in range(len(self.grids)):
-            df = pd.read_csv(self.path + '/' + self.grids[grid], sep=',', header=None, nrows=1)
-            self.dx.append(float(df[1]))
-            self.timesteps.append(float(df[3]))
-            self.dt.append(np.array(self.dx[grid]) / c0)
-            self.N_lambda.append(float(df[5]))
+    def _load_data(self):
+        self.grid_informations = np.transpose(np.load(self.path+'/info.npy'))
+        self.dx = self.grid_informations[0]
+        self.timesteps = self.grid_informations[1]
+        self.N_lambdas = self.grid_informations[2]
+        self.length_media = self.grid_informations[3]
+        self.theo_amplitude_merged = np.load(self.path+'/theory_ampl.npy')
+        self.theo_phasenunterschied_merged = np.load(self.path+'/theory_phase.npy')
+        self.exp_amplitude_merged = np.load(self.path+'/exp_ampl.npy')
+        self.exp_phase_merged = np.load(self.path+'/exp_phase.npy')
+        self.width_in_dx = np.load(self.path+'/width.npy')
 
-    def _set_data(self):
-        for grid in range(len(self.grids)):
-            df = pd.read_csv(self.path + '/' + self.grids[grid], sep=',', header=None, skiprows=[0, 1])
-            df = df.T
-            self.width_in_dx.append(df[0].to_numpy().tolist())
-            self.theo_ampl.append(df[1].to_numpy().tolist())
-            self.exp_ampl.append(df[2].to_numpy().tolist())
-            self.theo_phase.append(df[3].to_numpy().tolist())
-            self.exp_phase.append(df[4].to_numpy().tolist())
-
-    def _create_dictionary_to_sort_data(self):
-        d = {key: value for (key, value) in zip(self.grid_indices, self.N_lambda)}
-        sorted_dic = dict(sorted(d.items(), key=lambda x: x[1], reverse=True))
-        self.sorted_grids = list(sorted_dic.keys())
 
     def visualize(self):
-        theo_ampl = True
-        theo_phase =True
-        color_spec = [CYAN, BLUE, TEAL, RED, MAGENTA]
-        fig, axes = plt.subplots(nrows=1, ncols=2)
-        axes[0].ticklabel_format(axis='x', style='sci', scilimits=(0, 0))
-        axes[1].ticklabel_format(axis='x', style='sci', scilimits=(0, 0))
-        for grid in self.sorted_grids:
-            if theo_ampl:
-                axes[0].plot(np.array(self.width_in_dx[grid])*self.dx[grid], self.theo_ampl[grid], color=ORANGE, label='theory')
-                theo_ampl = False
-            axes[0].plot(np.array(self.width_in_dx[grid])*self.dx[grid], self.exp_ampl[grid], color=color_spec[grid], linestyle='dashed',  label=r'$N_{\lambda}=$'+'{0:.3}'.format(self.N_lambda[grid]))
-        axes[0].grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
-        axes[0].legend(loc='best')
-        axes[0].set_xlabel('width in m', fontsize=14)
-        axes[0].set_ylabel('transmitted amplitude ' + r'$E_{z,tr}$', fontsize=14)
-        for grid in self.sorted_grids:
-            if theo_phase:
-                axes[1].plot(np.array(self.width_in_dx[grid])*self.dx[grid], self.theo_phase[grid], color=ORANGE, label='theory')
-                theo_phase = False
-            axes[1].plot(np.array(self.width_in_dx[grid])*self.dx[grid], self.exp_phase[grid], color=color_spec[grid], linestyle='dashed',  label=r'$N_{\lambda}=$'+'{0:.3}'.format(self.N_lambda[grid]))
-        axes[1].grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
-        axes[1].legend(loc='best')
-        axes[1].set_xlabel('width in m', fontsize=14)
-        axes[1].set_ylabel('added phase', fontsize=14)
+        max_resolution_grid = int(np.argmax(self.N_lambdas))
+
+        fig, axes = plt.subplots(2, 2)
+        axes[0][0].grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
+        axes[0][1].grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
+        axes[1][0].grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
+        axes[1][1].grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
+        axes[0][0].set_xlabel('width in m', fontsize=14)
+        axes[0][1].set_xlabel('width in m', fontsize=14)
+        axes[1][0].set_xlabel('width in m', fontsize=14)
+        axes[1][1].set_xlabel('width in m', fontsize=14)
+        axes[0][0].set_ylabel('transmitted amplitude ' + r'$E_{z,tr}$', fontsize=14)
+        axes[1][0].set_ylabel('Phasenunterschied', fontsize=14)
+        axes[1][1].set_ylabel(r'$d(\phi_{exp},\phi_{theo})$', fontsize=14)
+        axes[0][1].set_ylabel(r'$E_{tr,theo}$ / $E_{tr,FDTD}$', fontsize=14)
+
+        axes[0][0].plot(self.width_in_dx[max_resolution_grid][0:int(self.length_media[max_resolution_grid])-1] * self.dx[max_resolution_grid],
+                        self.theo_amplitude_merged[max_resolution_grid][0:int(self.length_media[max_resolution_grid])-1], label='Theorie', color=ORANGE)
+        axes[1][0].plot(self.width_in_dx[max_resolution_grid][0:int(self.length_media[max_resolution_grid])-1] * self.dx[max_resolution_grid],
+                        self.theo_phasenunterschied_merged[max_resolution_grid][0:int(self.length_media[max_resolution_grid])-1], color=ORANGE,
+                        label='Theorie')
+
+        for grid in range(len(self.dx)):
+            axes[0][0].plot(self.width_in_dx[grid][0:int(self.length_media[grid])-1] * self.dx[grid], self.exp_amplitude_merged[grid][0:int(self.length_media[grid])-1], color=color_spec[grid], linestyle='dashed', label=r'$N_{\lambda}=$' + '{0:.3}'.format(self.N_lambdas[grid]))
+            axes[0][1].plot(self.width_in_dx[grid][0:int(self.length_media[grid])-1] * self.dx[grid], self.theo_amplitude_merged[grid][0:int(self.length_media[grid])-1]/self.exp_amplitude_merged[grid][0:int(self.length_media[grid])-1], color=color_spec[grid], linestyle='dashed', label=r'$N_{\lambda}=$' + '{0:.3}'.format(self.N_lambdas[grid]))
+            axes[1][0].plot(self.width_in_dx[grid][0:int(self.length_media[grid])-1] * self.dx[grid], self.exp_phase_merged[grid][0:int(self.length_media[grid])-1], color= color_spec[grid], linestyle='dashed', label=r'$N_{\lambda}=$' + '{0:.3}'.format(self.N_lambdas[grid]))
+            axes[1][1].plot(self.width_in_dx[grid][0:int(self.length_media[grid])-1] * self.dx[grid], np.abs(self.exp_phase_merged[grid][0:int(self.length_media[grid])-1] - self.theo_phasenunterschied_merged[grid][0:int(self.length_media[grid])-1]), color=color_spec[grid], label=r'$N_{\lambda}=$' + '{0:.3}'.format(self.N_lambdas[grid]))
+
+        axes[0][0].legend(loc='best')
+        axes[0][1].legend(loc='best')
+        axes[1][0].legend(loc='best')
+        axes[1][1].legend(loc='best')
+
         plt.show()
 
 class QPM_Length_benchmark(Case):
@@ -289,80 +276,11 @@ class Case_qpm_harmonic_length_old(Case):
         self.normalized_abs_fft_sqrd = self.abs_fft_sqrd / abs_fft_sqrd_max
 
 
-test = QPM_Length_benchmark(dir_name='six_lambda_30000_courant_1_timestep_peak_8000_analyze_shg_even_smaller_peak', zero_padding=9000)
-test.set_fft_limits(past_from_max=8000, future_from_max=8000)
-test.visualize_over_frequencies()
-indices_2omega = (np.array(test.omega)-2).argmin()
-shg_amplitude = test.abs_fft[:][indices_2omega]
-
-fig, axes = plt.subplots()
-axes.plot(test.relative_width, shg_amplitude)
-
-plt.show()
+lorentz_test = Lorentz_Slab_benchmark(dir_name='new_data_files')
+lorentz_test.visualize()
 
 
 
-#lorentz_slab = Lorentz_Slab_benchmark('different_N_new_Lorentz')
-#lorentz_slab.visualize()
-
-
-'''Case0 = Case_qpm_harmonic_length(filename='P_testing_benchmark_obj.csv', zero_padding=80000)
-Case0 = Case_qpm_harmonic_length_old(filename='E_5_two_lambda_but3long_30000_courant_1_timestep_peak_8000_analyze_shg_even_smaller_peak.csv', zero_padding=0)
-Case1 = Case_qpm_harmonic_length_old(filename='E_269_two_lambda_but3long_30000_courant_1_timestep_peak_8000_analyze_shg_even_smaller_peak.csv', zero_padding=0)
-Case2 = Case_qpm_harmonic_length_old(filename='E_533_two_lambda_but3long_30000_courant_1_timestep_peak_8000_analyze_shg_even_smaller_peak.csv', zero_padding=0)
-Case3 = Case_qpm_harmonic_length_old(filename='E_797_two_lambda_but3long_30000_courant_1_timestep_peak_8000_analyze_shg_even_smaller_peak.csv', zero_padding=0)
-Case4 = Case_qpm_harmonic_length_old(filename='E_1061_two_lambda_but3long_30000_courant_1_timestep_peak_8000_analyze_shg_even_smaller_peak.csv', zero_padding=0)
-Case5 = Case_qpm_harmonic_length_old(filename='E_1325_two_lambda_but3long_30000_courant_1_timestep_peak_8000_analyze_shg_even_smaller_peak.csv', zero_padding=0)
-Case6 = Case_qpm_harmonic_length_old(filename='E_1589_two_lambda_but3long_30000_courant_1_timestep_peak_8000_analyze_shg_even_smaller_peak.csv', zero_padding=0)
-'''
-'''
-def show_trace(paths, positions):
-    collected_df = pd.DataFrame()
-    for path, pos in zip(paths, positions):
-        indv_df = pd.read_csv(path, sep=',', header=None, skiprows=[0])
-        indv_df = indv_df.T
-        collected_df[pos] = indv_df[0]
-    data_matrix = collected_df.to_numpy()
-    im = plt.imshow(np.abs(data_matrix), cmap='magma', aspect='auto')
-    plt.colorbar(im, orientation='horizontal')
-    plt.show()
-'''
-
-
-
-
-
-'''
-positions = [5 + 88*i for i in range(50)]
-print(positions)
-path_names = ['fdtd_1d/saved_data/qpm_harmonic_length/E_'+str(pos)+'_two_lambda_but3long_30000_courant_1_timestep_peak_8000_analyze_shg_even_smaller_peak.csv' for pos in positions]
-show_trace(path_names, positions)
-
-'''
-
-'''fig, axes = plt.subplots(ncols=2, nrows=1)
-#axes[0][0].plot(Case1.omega, Case1.abs_fft, color=TEAL)
-axes[1].set_yscale(value='log')
-#axes[1][0].plot(Case2.omega, Case2.abs_fft, color=ORANGE)
-axes[0].plot(Case0.raw_data, color=GREY)
-axes[1].plot(Case0.omega, Case0.normalized_abs_fft_sqrd, color=GREY)
-axes[0].plot(Case1.raw_data, color=ORANGE)
-axes[1].plot(Case1.omega, Case1.normalized_abs_fft_sqrd, color=ORANGE)
-axes[0].plot(Case2.raw_data, color=TEAL)
-#axes[1][1].set_yscale(value='log')
-axes[1].plot(Case2.omega, Case2.normalized_abs_fft_sqrd, color=TEAL)
-axes[1].plot(Case3.omega, Case3.normalized_abs_fft_sqrd, color=CYAN)
-axes[0].plot(Case3.raw_data, color=CYAN)
-axes[1].plot(Case4.omega, Case4.normalized_abs_fft_sqrd, color=BLUE)
-axes[0].plot(Case4.raw_data, color=BLUE)
-axes[1].plot(Case5.omega, Case5.normalized_abs_fft_sqrd, color=RED)
-axes[0].plot(Case5.raw_data, color=RED)
-axes[1].plot(Case6.omega, Case6.normalized_abs_fft_sqrd, color=MAGENTA)
-axes[0].plot(Case6.raw_data, color=MAGENTA)
-'''
-#im = axes.imshow(np.abs(merge_data(path_names, positions), cmap='magma', aspect='auto'))
-#plt.colorbar(im, orientation='horizontal')
-#plt.show()
 
 
 

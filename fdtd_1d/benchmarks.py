@@ -218,38 +218,12 @@ class Harmonic_Slab_Lorentz_Setup(benchmark):
         for grid in range(len(self.dx)):
             phase_diff[grid][0:self.length_media[grid] - 1] = -np.array(self.exp_phase_merged[grid][0:self.length_media[grid] - 1]) + self.wo_phase_merged[grid]
             mask = (phase_diff[grid][:]) > np.pi
-            #arr_1 = np.where(mask is True, -2*np.pi, mask)
-            #arr_2 = np.where(arr_1 is False, 0, arr_1)
-            #print(arr_2)
             phase_diff[grid][mask] -= 2*np.pi
         return phase_diff
 
     def _set_N_lambda(self):
         for grid in range(len(self.dx)):
             self.N_lambda[grid] = self.lamb/(self.dx[grid]*self.n_real)
-
-    '''    def store_obs_data(self):
-        self.allocate_directory()
-        
-        :return:
-        2 rows of basic information and structure
-        width ...
-        theory_ampl ...
-        exp_ampl ...
-        phase_theory ...
-        phase_exp ...
-        
-        for grid in range(len(self.dx)):
-            filename = os.path.join(self.dir_path, self.grids[grid]+'.csv')
-            with open(filename, 'w', newline='') as csvfile:
-                writer = csv.writer(csvfile)
-                writer.writerow(['dx', self.dx[grid], 'timesteps', self.timesteps[grid], 'N_lambda', self.N_lambda[grid]])
-                writer.writerow(['width in dx', 'theory', 'fdtd', 'phase_theory', 'phase_exp'])
-                writer.writerow((np.array(self.indices[grid]) - self.start_media).tolist())
-                writer.writerow(self.theo_amplitude[grid])
-                writer.writerow(self.exp_amplitude[grid])
-                writer.writerow(self.theo_phasenunterschied[grid])
-                writer.writerow(self.get_exp_phasedifference()[grid].tolist())'''
 
     def store_obs_data(self):
         self.allocate_directory()
@@ -260,20 +234,21 @@ class Harmonic_Slab_Lorentz_Setup(benchmark):
         file_exp_ampl = os.path.join(self.dir_path, 'exp_ampl.npy')
         file_exp_phase = os.path.join(self.dir_path, 'exp_phase.npy')
 
-        grid_informations = np.zeros(shape=(len(self.grids), 3))
+        grid_informations = np.zeros(shape=(len(self.grids), 4))
         width_in_dx = np.zeros(shape=(len(self.grids), np.max(self.length_media)))
         for grid in range(len(self.grids)):
             width_in_dx[grid][0:self.length_media[grid] - 1] = np.array(self.indices[grid]) - self.start_media
             grid_informations[grid][0] = self.dx[grid]
             grid_informations[grid][1] = self.timesteps[grid]
             grid_informations[grid][2] = self.N_lambda[grid]
+            grid_informations[grid][3] = self.length_media[grid]
 
         np.save(file_grid_informations, arr=grid_informations)
         np.save(file_width_in_dx, arr=width_in_dx)
         np.save(file_theory_ampl, arr=self.theo_amplitude_merged)
         np.save(file_theory_phase, arr=self.theo_phasenunterschied_merged)
         np.save(file_exp_ampl, arr=self.exp_amplitude_merged)
-        np.save(file_exp_phase, arr=self.exp_phase_merged)
+        np.save(file_exp_phase, arr=self.get_exp_phasedifference)
 
     def run_benchmark(self):
         self._grid_wo_slab()
