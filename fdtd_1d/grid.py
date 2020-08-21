@@ -34,8 +34,6 @@ class Grid:
         self.timesteps_passed = 0
         self.grid_name = name               # needed if benchmarks create multiple grids (distinguish them)
         self.benchmark_type = benchmark     # some objects have to know which kind of benchmark is processed to work properly
-        self.all_mat_slices = []
-        self.all_E_mats = set()
         self.sources = []                   # saving source.py-objects
         self.materials = []                 # saving material.py-objects
         self.boundaries = []                # saving boundary.py-objects
@@ -50,15 +48,6 @@ class Grid:
         # placing_obj is representing materials, sources or boundaries
         # note that each obj owns a different declaration of _place_into_grid
         placing_obj._place_into_grid(grid=self, index=key)
-
-    '''
-    def curl_Ez(field, cell):
-        return field[cell + 1] - field[cell]
-
-
-    def curl_Hy(field, cell):
-        return field[cell] - field[cell - 1]
-    '''
 
     def curl_Ez(self):
         return (np.roll(self.Ez, -1) - self.Ez)[0:self.nx-1]
@@ -144,10 +133,8 @@ class Grid:
     def update(self):
         # note that steps are dependent on object
         # updating polarisation P
-        for index in self.all_E_mats:               #TODO: is there an magnificant matrix multiplicaton thingy (Way WAY faster)?
-            for mat in self.materials:
-                if index in mat.position:
-                    mat.step_P(index)
+        for mat in self.materials:
+            mat.step_P()
 
         # saving Ez - boundaries
         for bound in self.boundaries:
@@ -179,11 +166,9 @@ class Grid:
         for bound in self.boundaries:
             bound.step_Hy()
 
-        # updating polarisation current J_p
-        for index in self.all_E_mats:
-            for mat in self.materials:
-                if index in mat.position:
-                    mat.step_J_p(index)
+        # updating polarisation current J_
+        for mat in self.materials:
+            mat.step_J_p()
 
         # saving local points in order to extract phase and amplitude data
         for observer in self.local_observers:
