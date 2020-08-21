@@ -249,6 +249,7 @@ class QPM_Length_benchmark(Case):
         plt.colorbar(c, orientation='horizontal')
         plt.show()
 
+
 class Case_qpm_harmonic_length_old(Case):
     ''' reconstructs a bunch of information about a file of interest created by a qpm_harmonic benchmark'''
 
@@ -290,8 +291,15 @@ class Case_qpm_harmonic_length_old(Case):
 
 test = QPM_Length_benchmark(dir_name='six_lambda_30000_courant_1_timestep_peak_8000_analyze_shg_even_smaller_peak', zero_padding=9000)
 test.set_fft_limits(past_from_max=8000, future_from_max=8000)
-test.show_trace()
 test.visualize_over_frequencies()
+indices_2omega = (np.array(test.omega)-2).argmin()
+shg_amplitude = test.abs_fft[:][indices_2omega]
+
+fig, axes = plt.subplots()
+axes.plot(test.relative_width, shg_amplitude)
+
+plt.show()
+
 
 
 #lorentz_slab = Lorentz_Slab_benchmark('different_N_new_Lorentz')

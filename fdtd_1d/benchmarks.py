@@ -4,6 +4,9 @@ import os
 import fdtd_1d as f
 import matplotlib.pyplot as plt
 from .constants import c0, BLUE, CYAN, TEAL, ORANGE, RED, MAGENTA, GREY
+from werkzeug.utils import cached_property
+
+color_spec = [BLUE, CYAN, TEAL, ORANGE, RED, MAGENTA, GREY]
 
 # Implementation of a dielectric slab
 def theory_dielectric_slab_complex(grid):
@@ -62,35 +65,38 @@ class Harmonic_Slab_Lorentz_Setup(benchmark):
         self.dx = dx
         self.indices = []
         self.grids = []
+
         for grid in range(len(self.dx)):
             self.indices.append([start_index_media + 2 + i for i in np.arange(0, length_media_in_dx[grid] - 1)])
             self.grids.append('grid_'+str(grid))
+
         self.eps_inf = eps_inf
         self.Nx = length_grid_in_dx
-        self.length_media = length_media_in_dx
+        self.length_media = np.array(length_media_in_dx)
         self.lamb = wavelength
         self.timesteps = timesteps
         self.courant = courant
-        self.N_lambda = [[] for _ in range(len(self.dx))]
+        self.N_lambda = np.zeros(len(self.dx))                                                             #[[] for _ in range(len(self.dx))]
         self.ampl = ampl
         self.conductivity = conductivity
         self.gamma = gamma
         self.w0 = w0
+
         self.chi_1 = chi_1
         self.chi_2 = chi_2
         self.chi_3 = chi_3
-        self.wo_phase = [[] for _ in range(len(self.dx))]
-        self.theo_phasenunterschied = [[] for _ in range(len(self.dx))]
-        self.theo_amplitude = [[] for _ in range(len(self.dx))]
-        self.exp_phase = [[] for _ in range(len(self.dx))]
-        self.exp_amplitude = [[] for _ in range(len(self.dx))]
-        self.eps_real = []
-        self.eps_imag = []
-        self.eps_complex = []
-        self.n_real = []
 
+        self.eps_real = None
+        self.eps_imag = None
+        self.eps_complex = None
+        self.n_real = None
 
-        self.allocate_directory()
+        self.wo_phase_merged = np.zeros(len(self.dx))
+        self.theo_phasenunterschied_merged = np.zeros(shape=(len(self.dx), np.max(self.length_media)-1))
+        self.theo_amplitude_merged = np.zeros(shape=(len(self.dx), np.max(self.length_media)-1))
+        self.exp_phase_merged = np.zeros(shape=(len(self.dx), np.max(self.length_media)-1))
+        self.exp_amplitude_merged = np.zeros(shape=(len(self.dx), np.max(self.length_media)-1))
+
 
     def _grid_wo_slab(self):
         position_src = self.start_media - 1
@@ -116,20 +122,20 @@ class Harmonic_Slab_Lorentz_Setup(benchmark):
                 wo_grid[end_mur] = f.RightSideMur()
 
             wo_grid.run_timesteps(self.timesteps[grid], vis=False)
-            self.wo_phase[grid].append(wo_grid.local_observers[0].phase)
+            self.wo_phase_merged[grid] = wo_grid.local_observers[0].phase
 
     def _grids_w_slab(self):
         position_src = self.start_media - 1
         for grid in range(len(self.dx)):
             position_obs = self.Nx[grid] - 3
             end_mur = self.Nx[grid] - 1
-            for ind in self.indices[grid]:
+            for ind_media, ind_array in zip(self.indices[grid], range(self.length_media[grid])):
                 # Step 1: init grid
-                w_grid = 'slab' + str(ind)
+                w_grid = 'slab' + str(ind_media)
                 w_grid = f.Grid(nx=self.Nx[grid], dx=self.dx[grid], courant=self.courant)
 
                 # Step 2: init media
-                w_grid[self.start_media:ind] = f.LorentzMedium(name='media', permeability=1, eps_inf=self.eps_inf, conductivity=self.conductivity, gamma=self.gamma, chi_1=self.chi_1, chi_2=self.chi_2, chi_3=self.chi_3, w0=self.w0)
+                w_grid[self.start_media:ind_media] = f.LorentzMedium(name='media', permeability=1, eps_inf=self.eps_inf, conductivity=self.conductivity, gamma=self.gamma, chi_1=self.chi_1, chi_2=self.chi_2, chi_3=self.chi_3, w0=self.w0)
 
                 # Step 3: init source
                 if w_grid.courant == 1:
@@ -156,64 +162,75 @@ class Harmonic_Slab_Lorentz_Setup(benchmark):
                 w_grid.run_timesteps(timesteps=self.timesteps[grid], vis=False)
 
                 # Step 7: misc
-                self.exp_amplitude[grid].append(w_grid.local_observers[0].amplitude)
-                self.exp_phase[grid].append(w_grid.local_observers[0].phase)
-                self.theo_amplitude[grid].append(theory_dielectric_slab_complex(w_grid)[0])
-                self.theo_phasenunterschied[grid].append(theory_dielectric_slab_complex(w_grid)[1])
+                self.exp_amplitude_merged[grid][ind_array] = w_grid.local_observers[0].amplitude
+                self.exp_phase_merged[grid][ind_array] = w_grid.local_observers[0].phase
+                self.theo_amplitude_merged[grid][ind_array] = theory_dielectric_slab_complex(w_grid)[0]
+                self.theo_phasenunterschied_merged[grid][ind_array] = theory_dielectric_slab_complex(w_grid)[1]
+
                 # if list self.eps_real is empty:
-                if not self.eps_real:
-                    self.eps_real.append(w_grid.materials[0].epsilon_real(w_grid.sources[0].omega))
-                    self.eps_imag.append(w_grid.materials[0].epsilon_imag(w_grid.sources[0].omega))
-                    self.eps_complex.append(w_grid.materials[0].epsilon_complex(w_grid.sources[0].omega))
-                    self.n_real.append(np.sqrt((np.abs(self.eps_complex[0]) + self.eps_real[0])/2))
+                if self.eps_real is None:
+                    self.eps_real = w_grid.materials[0].epsilon_real(w_grid.sources[0].omega)
+                    self.eps_imag = w_grid.materials[0].epsilon_imag(w_grid.sources[0].omega)
+                    self.eps_complex = w_grid.materials[0].epsilon_complex(w_grid.sources[0].omega)
+                    self.n_real = np.sqrt((np.abs(self.eps_complex) + self.eps_real)/2)
+
 
 
     def _visualize(self):
+        max_resolution_grid = int(np.argmax(self.N_lambda))
+
         fig, axes = plt.subplots(2, 2)
-        fig.suptitle(r'$n_{real}=$'+'{0:.3}'.format(self.n_real[0]) + r'     $N_{\lambda_{media}}=$' + '{0:.3}'.format(self.lamb/(self.dx*self.n_real[0])), fontsize=20)
-        axes[0][0].plot(np.array(self.indices) - self.start_media, np.array(self.theo_amplitude), label='theorie', color=ORANGE, alpha=1)
         axes[0][0].grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
-        axes[0][0].plot(np.array(self.indices) - self.start_media, np.array(self.exp_amplitude), label='FDTD', linestyle='dashed', color=TEAL, alpha=1)
-        axes[0][0].legend(loc='best')
-        axes[0][0].set_xlabel('Breite des Mediums in ' + r'$\Delta_x$', fontsize=14)
-        axes[0][0].set_ylabel('Transmittierte Amplitude ' + r'$Ez_{tr}$', fontsize=14)
-        axes[0][0].set_xlim([0, self.length_media + 1])
-        axes[0][1].plot(np.array(self.indices) - self.start_media, np.array(self.theo_amplitude) / np.array(self.exp_amplitude), color=TEAL)
-        axes[0][1].set_ylabel(r'$E_{tr,theo}$ / $E_{tr,FDTD}$', fontsize=14)
-        axes[0][1].set_xlabel('Breite des Mediums in ' + r'$\Delta_x$', fontsize=14)
         axes[0][1].grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
-        axes[0][1].set_xlim([0, self.length_media + 1])
-        axes[1][0].set_ylabel('Phasenunterschied', fontsize=14)
-        axes[1][0].plot(np.array(self.indices) - self.start_media, self.theo_phasenunterschied, label='theorie', color=ORANGE, alpha=1)
-        axes[1][0].set_xlabel('Breite des Mediums in ' + r'$\Delta_x$', fontsize=14)
         axes[1][0].grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
-        axes[1][0].plot(np.array(self.indices) - self.start_media, self.get_exp_phasedifference(), color=TEAL, linestyle='dashed',
-                        label='FDTD', alpha=1)
-        axes[1][0].set_xlim([0, self.length_media + 1])
-        axes[1][0].legend()
-        axes[1][1].set_xlabel('Breite des Mediums in ' + r'$\Delta_x$', fontsize=14)
-        axes[1][1].set_ylabel(r'$d(\phi_{exp},\phi_{theo})$', fontsize=14)
-        axes[1][1].plot(np.array(self.indices) - self.start_media,
-                        np.abs(self.get_exp_phasedifference() - np.array(self.theo_phasenunterschied)), color=TEAL)
         axes[1][1].grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
-        axes[1][1].set_xlim([0, self.length_media + 1])
+        axes[0][0].set_xlabel('width in m', fontsize=14)
+        axes[0][1].set_xlabel('width in m', fontsize=14)
+        axes[1][0].set_xlabel('width in m', fontsize=14)
+        axes[1][1].set_xlabel('width in m', fontsize=14)
+        axes[0][0].set_ylabel('transmitted amplitude ' + r'$E_{z,tr}$', fontsize=14)
+        axes[1][0].set_ylabel('Phasenunterschied', fontsize=14)
+        axes[1][1].set_ylabel(r'$d(\phi_{exp},\phi_{theo})$', fontsize=14)
+        axes[0][1].set_ylabel(r'$E_{tr,theo}$ / $E_{tr,FDTD}$', fontsize=14)
+
+        axes[0][0].plot(np.array((np.array(self.indices[max_resolution_grid])) - self.start_media) * self.dx[max_resolution_grid],
+                        self.theo_amplitude_merged[max_resolution_grid][0:self.length_media[max_resolution_grid] - 1], label='Theorie', color=ORANGE)
+        axes[1][0].plot(np.array((np.array(self.indices[max_resolution_grid])) - self.start_media) * self.dx[max_resolution_grid],
+                        self.theo_phasenunterschied_merged[max_resolution_grid][0:self.length_media[max_resolution_grid] - 1], color=ORANGE,
+                        label='Theorie')
+
+        for grid in range(len(self.dx)):
+            axes[0][0].plot(np.array((np.array(self.indices[grid])) - self.start_media) * self.dx[grid], self.exp_amplitude_merged[grid][0:self.length_media[grid] - 1], color=color_spec[grid], linestyle='dashed', label=r'$N_{\lambda}=$' + '{0:.3}'.format(self.N_lambda[grid]))
+            axes[0][1].plot(np.array((np.array(self.indices[grid])) - self.start_media) * self.dx[grid], self.theo_amplitude_merged[grid][0:self.length_media[grid] - 1]/self.exp_amplitude_merged[grid][0:self.length_media[grid] - 1], color=color_spec[grid], linestyle='dashed', label=r'$N_{\lambda}=$' + '{0:.3}'.format(self.N_lambda[grid]))
+            axes[1][0].plot(np.array((np.array(self.indices[grid])) - self.start_media) * self.dx[grid], self.get_exp_phasedifference[grid][0:self.length_media[grid] - 1], color= color_spec[grid], linestyle='dashed', label=r'$N_{\lambda}=$' + '{0:.3}'.format(self.N_lambda[grid]))
+            axes[1][1].plot(np.array((np.array(self.indices[grid])) - self.start_media) * self.dx[grid], np.abs(self.get_exp_phasedifference[grid][0:self.length_media[grid] - 1] - self.theo_phasenunterschied_merged[grid][0:self.length_media[grid] - 1]), color=color_spec[grid], label=r'$N_{\lambda}=$' + '{0:.3}'.format(self.N_lambda[grid]))
+
+        axes[0][0].legend(loc='best')
+        axes[0][1].legend(loc='best')
+        axes[1][0].legend(loc='best')
+        axes[1][1].legend(loc='best')
+
         plt.show()
 
+    @cached_property
     def get_exp_phasedifference(self):
-        phase_diff = [[] for _ in range(len(self.dx))]
+        phase_diff = np.zeros(shape=(len(self.dx), np.max(self.length_media)-1))
         for grid in range(len(self.dx)):
-            phase_diff[grid] = -np.array(self.exp_phase[grid]) + self.wo_phase[grid]
-            for index in range(len(phase_diff[grid])):
-                if phase_diff[grid][index] > np.pi:
-                    phase_diff[grid][index] -= 2*np.pi
+            phase_diff[grid][0:self.length_media[grid] - 1] = -np.array(self.exp_phase_merged[grid][0:self.length_media[grid] - 1]) + self.wo_phase_merged[grid]
+            mask = (phase_diff[grid][:]) > np.pi
+            #arr_1 = np.where(mask is True, -2*np.pi, mask)
+            #arr_2 = np.where(arr_1 is False, 0, arr_1)
+            #print(arr_2)
+            phase_diff[grid][mask] -= 2*np.pi
         return phase_diff
 
     def _set_N_lambda(self):
         for grid in range(len(self.dx)):
-            self.N_lambda[grid] = self.lamb/(self.dx[grid]*self.n_real[0])
+            self.N_lambda[grid] = self.lamb/(self.dx[grid]*self.n_real)
 
-    def store_obs_data(self):
-        '''
+    '''    def store_obs_data(self):
+        self.allocate_directory()
+        
         :return:
         2 rows of basic information and structure
         width ...
@@ -221,7 +238,7 @@ class Harmonic_Slab_Lorentz_Setup(benchmark):
         exp_ampl ...
         phase_theory ...
         phase_exp ...
-        '''
+        
         for grid in range(len(self.dx)):
             filename = os.path.join(self.dir_path, self.grids[grid]+'.csv')
             with open(filename, 'w', newline='') as csvfile:
@@ -232,13 +249,37 @@ class Harmonic_Slab_Lorentz_Setup(benchmark):
                 writer.writerow(self.theo_amplitude[grid])
                 writer.writerow(self.exp_amplitude[grid])
                 writer.writerow(self.theo_phasenunterschied[grid])
-                writer.writerow(self.get_exp_phasedifference()[grid].tolist())
+                writer.writerow(self.get_exp_phasedifference()[grid].tolist())'''
+
+    def store_obs_data(self):
+        self.allocate_directory()
+        file_grid_informations = os.path.join(self.dir_path, 'info.npy')
+        file_width_in_dx = os.path.join(self.dir_path, 'width.npy')
+        file_theory_ampl = os.path.join(self.dir_path, 'theory_ampl.npy')
+        file_theory_phase = os.path.join(self.dir_path, 'theory_phase.npy')
+        file_exp_ampl = os.path.join(self.dir_path, 'exp_ampl.npy')
+        file_exp_phase = os.path.join(self.dir_path, 'exp_phase.npy')
+
+        grid_informations = np.zeros(shape=(len(self.grids), 3))
+        width_in_dx = np.zeros(shape=(len(self.grids), np.max(self.length_media)))
+        for grid in range(len(self.grids)):
+            width_in_dx[grid][0:self.length_media[grid] - 1] = np.array(self.indices[grid]) - self.start_media
+            grid_informations[grid][0] = self.dx[grid]
+            grid_informations[grid][1] = self.timesteps[grid]
+            grid_informations[grid][2] = self.N_lambda[grid]
+
+        np.save(file_grid_informations, arr=grid_informations)
+        np.save(file_width_in_dx, arr=width_in_dx)
+        np.save(file_theory_ampl, arr=self.theo_amplitude_merged)
+        np.save(file_theory_phase, arr=self.theo_phasenunterschied_merged)
+        np.save(file_exp_ampl, arr=self.exp_amplitude_merged)
+        np.save(file_exp_phase, arr=self.exp_phase_merged)
 
     def run_benchmark(self):
         self._grid_wo_slab()
         self._grids_w_slab()
         self._set_N_lambda()
-        #self._visualize()
+        self._visualize()
 
 class Quasi_Phase_Matching(benchmark):
     ''' reproduces paper QuasiPhaseMatching from Varin's Paper '''

@@ -5,14 +5,16 @@ import pandas as pd
 from .constants import c0, eps0, mu0
 from .visuals import visualize, AnimateTillTimestep, visualize_permittivity, visualize_fft
 from .observer import QuasiHarmonicObserver, E_FFTObserver, P_FFTObserver
-
-
+from werkzeug.utils import cached_property
+'''
 def curl_Ez(field, cell):
     return field[cell + 1] - field[cell]
 
 
 def curl_Hy(field, cell):
     return field[cell] - field[cell - 1]
+'''
+
 
 class Grid:
 
@@ -32,7 +34,6 @@ class Grid:
         self.timesteps_passed = 0
         self.grid_name = name               # needed if benchmarks create multiple grids (distinguish them)
         self.benchmark_type = benchmark     # some objects have to know which kind of benchmark is processed to work properly
-        self.all_E_mats = set()
         self.sources = []                   # saving source.py-objects
         self.materials = []                 # saving material.py-objects
         self.boundaries = []                # saving boundary.py-objects
@@ -47,6 +48,12 @@ class Grid:
         # placing_obj is representing materials, sources or boundaries
         # note that each obj owns a different declaration of _place_into_grid
         placing_obj._place_into_grid(grid=self, index=key)
+
+    def curl_Ez(self):
+        return (np.roll(self.Ez, -1) - self.Ez)[0:self.nx-1]
+
+    def curl_Hy(self):
+        return (self.Hy - np.roll(self.Hy, 1))[1:self.nx]
 
 
     def run_time(self, simulate_t, vis=True):
@@ -106,35 +113,35 @@ class Grid:
         tab_sig = pd.DataFrame.from_dict(dict)
         print(tab_sig.to_string())
 
+    @cached_property
+    def ca(self):                            # Taflove convention
+        return (1 - (self.conductivity * self.dt) / (2 * eps0 * self.eps)) / (1 + (self.conductivity * self.dt) / (2 * eps0 * self.eps))
 
-    def ca(self, cell):                            # Taflove convention
-        return (1 - (self.conductivity[cell] * self.dt) / (2 * eps0 * self.eps[cell])) / (1 + (self.conductivity[cell] * self.dt) / (2 * eps0 * self.eps[cell]))
+    @cached_property
+    def cb(self):                            # Taflove convention
+        return 1 / (1 + (self.conductivity * self.dt) / (2 * eps0 * self.eps))
 
-    def cb(self, cell):                            # Taflove convention
-        return 1 / (1 + (self.conductivity[cell] * self.dt) / (2 * eps0 * self.eps[cell]))
 
-    def step_Ez(self, cell):
-        self.Ez[cell] = self.ca(cell) * self.Ez[cell] + self.dt / (eps0 * self.eps[cell]) * self.cb(cell) * (curl_Hy(self.Hy, cell) / self.dx - self.J_p[cell])
+    def step_Ez(self):
+        self.Ez[1:self.nx] = self.ca[1:self.nx] * self.Ez[1:self.nx] + self.dt / (eps0 * self.eps[1:self.nx]) * self.cb[1:self.nx] * (self.curl_Hy()/self.dx - self.J_p[1:self.nx])
 
-    def step_Hy(self, cell):
-        self.Hy[cell] = self.Hy[cell] + self.dt/(mu0 * self.mu[cell] * self.dx) * curl_Ez(self.Ez, cell)
+
+    def step_Hy(self):
+        self.Hy[0:self.nx-1] = self.Hy[0:self.nx-1] + self.dt/(mu0 * self.mu[0:self.nx-1] * self.dx) * self.curl_Ez()
 
     # main algorithm
     def update(self):
         # note that steps are dependent on object
         # updating polarisation P
-        for index in self.all_E_mats:
-            for mat in self.materials:
-                if index in mat.position:
-                    mat.step_P(index)
+        for mat in self.materials:
+            mat.step_P()
 
         # saving Ez - boundaries
         for bound in self.boundaries:
             bound.save_Ez()
 
         # updating E - field, index [1,last cell]
-        for index in range(1, self.nx):
-            self.step_Ez(index)
+        self.step_Ez()
 
         # updating E - Sources
         for source in self.sources:
@@ -149,8 +156,7 @@ class Grid:
             bound.save_Hy()
 
         # updating Hy - field, index [first cell, last cell - 1]
-        for index in range(0, self.nx - 1):
-            self.step_Hy(index)
+        self.step_Hy()
 
         # updating Hy - Sources
         for source in self.sources:
@@ -160,11 +166,9 @@ class Grid:
         for bound in self.boundaries:
             bound.step_Hy()
 
-        # updating polarisation current J_p
-        for index in self.all_E_mats:
-            for mat in self.materials:
-                if index in mat.position:
-                    mat.step_J_p(index)
+        # updating polarisation current J_
+        for mat in self.materials:
+            mat.step_J_p()
 
         # saving local points in order to extract phase and amplitude data
         for observer in self.local_observers:

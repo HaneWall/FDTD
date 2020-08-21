@@ -75,8 +75,8 @@ class E_FFTObserver(ParentObserver):
         self.type = 'E'
         self.first_timestep = first_timestep
         self.second_timestep = second_timestep
-        self.observed_E = []
-        self.Ez_fft = []
+        self.observed_E = np.zeros(self.second_timestep-self.first_timestep)
+        self.Ez_fft = None
 
     @cached_property
     def timestep_duration(self):
@@ -90,7 +90,7 @@ class E_FFTObserver(ParentObserver):
     # saving Ez in order to fft
     def save_Ez(self):
         if self.grid.timesteps_passed in range(self.first_timestep, self.second_timestep + 1):
-            self.observed_E.append(self.grid.Ez[self.position])
+            self.observed_E[self.grid.timesteps_passed-self.first_timestep] = (self.grid.Ez[self.position])
 
     # store Ez (and Ez_fft) in order to analyze data wo computing simulation again
     def store_Ez_data(self, filename, benchmark_name='No_Name'):
@@ -101,11 +101,7 @@ class E_FFTObserver(ParentObserver):
             filepath_0 = os.path.join(os.path.dirname(__file__), 'saved_data/'+self.grid.benchmark_type+'/'+benchmark_name)
 
         filepath_1 = os.path.join(filepath_0, filename)
-        with open(filepath_1, 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow(['dt', self.grid.dt, 'timestep_duration', self.timestep_duration])
-            writer.writerow(self.observed_E)
-            #writer.writerow(self.Ez_fft)
+        np.save(filepath_1, self.observed_E)
 
 
 
@@ -120,8 +116,8 @@ class P_FFTObserver(ParentObserver):
         self.type = 'P'
         self.first_timestep = first_timestep
         self.second_timestep = second_timestep
-        self.observed_P = []
-        self.P_fft = []
+        self.observed_P = np.zeros(self.second_timestep-self.first_timestep)
+        self.P_fft = None
 
     @cached_property
     def timestep_duration(self):
@@ -134,7 +130,7 @@ class P_FFTObserver(ParentObserver):
 
     def save_P(self):
         if self.grid.timesteps_passed in range(self.first_timestep, self.second_timestep + 1):
-            self.observed_P.append(self.grid.P[self.position])
+            self.observed_P[self.grid.timesteps_passed-self.first_timestep] = self.grid.P[self.position]
 
     def store_P_data(self, filename, benchmark_name='No_Name'):
         if self.grid.benchmark_type is None:
@@ -145,8 +141,6 @@ class P_FFTObserver(ParentObserver):
 
 
         filepath_1 = os.path.join(filepath_0, filename)
-        with open(filepath_1, 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow(['dt', self.grid.dt, 'timestep_duration', self.timestep_duration])
-            writer.writerow(self.observed_P)
-            #writer.writerow(self.P_fft)
+        np.save(filepath_1, self.observed_P)
+
+

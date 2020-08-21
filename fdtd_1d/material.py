@@ -31,7 +31,6 @@ class Vacuum:
             self.grid.eps[index] = self.eps
             self.grid.mu[index] = self.mu
             self.grid.conductivity[index] = self.conductivity
-            self.grid.all_E_mats.add(index)
 
         elif isinstance(index, slice):          # note that [1:5] means cell INDICES 1, 2, 3, 4 are getting manipulated
             self.grid = grid
@@ -42,7 +41,6 @@ class Vacuum:
                 self.grid.eps[cell] = self.eps
                 self.grid.mu[cell] = self.mu
                 self.grid.conductivity[cell] = self.conductivity
-                self.grid.all_E_mats.add(cell)
 
         else:
             raise KeyError('Currently not supporting these kind of keys! Use slice or simple index.')
@@ -69,10 +67,10 @@ class NonDispersiveMedia(Vacuum):
     def epsilon_complex(self, omega):
         return self.eps
 
-    def step_P(self, index):
+    def step_P(self):
         pass
 
-    def step_J_p(self, index):
+    def step_J_p(self):
         pass
 
 class LorentzMedium(Vacuum):
@@ -105,28 +103,22 @@ class LorentzMedium(Vacuum):
 
     @cached_property
     def a(self):
-        a_list = []
-        for w_k, gamma_k in zip(self.w_0, self.gamma):
-            a_list.append((self.grid.dt * w_k**2) / (1 + gamma_k/2 * self.grid.dt))
-        a = np.array(a_list)
+        a = np.zeros(len(self.w_0))
+        for w_k, gamma_k, ind in zip(self.w_0, self.gamma, range(len(self.w_0))):
+            a[ind] = (self.grid.dt * w_k**2) / (1 + gamma_k/2 * self.grid.dt)
         return a
 
     @cached_property
     def b(self):
-        b_list = []
-        for gamma_k in self.gamma:
-            b_list.append((1 - gamma_k/2 * self.grid.dt) / (1 + gamma_k/2 * self.grid.dt))
-        b = np.array(b_list)
+        b = np.zeros(len(self.w_0))
+        for gamma_k, ind in zip(self.gamma, range(len(self.w_0))):
+            b[ind] = (1 - gamma_k/2 * self.grid.dt) / (1 + gamma_k/2 * self.grid.dt)
         return b
 
     @cached_property
     def chi_matrix(self):
-        chi_m = np.transpose(np.array([self.chi_1, self.chi_2, self.chi_3]))
+        chi_m = np.array([self.chi_1, self.chi_2, self.chi_3])
         return chi_m
-
-    def E_vec(self, index):
-        vec = np.array([self.grid.Ez[index], self.grid.Ez[index]**2, self.grid.Ez[index]**3])
-        return vec
 
     def epsilon_real(self, omega):
         eps_real = np.real(self.epsilon_complex(omega))
@@ -142,46 +134,24 @@ class LorentzMedium(Vacuum):
             eps_complex += chi_1_k * (w_k ** 2) / (w_k ** 2 - omega ** 2 - 1j * gamma_k * omega)
         return eps_complex
 
-    def step_P_k(self, relative_index, k):
-        self.P_k[relative_index][k] = self.P_k[relative_index][k] + self.grid.dt * self.J_p_k[relative_index][k]
-
-    def step_P(self, grid_index):
-        #CHANGED: rewritten to allocate functions --> smaller arrays
+    def step_P(self):
         if self.J_p_k is None:
             self._allocate_J_p_k()
             self._allocate_P_k()
-            self.start_of_media = self.position[0]
 
-        # define relative_index inside media (0 = start of media)
-        relative_index = grid_index - self.start_of_media
+        self.P_k[0:len(self.position)] = self.P_k[0:len(self.position)] + self.grid.dt * self.J_p_k[0:len(self.position)]
+        self.grid.P[self.position[0]:(self.position[-1] + 1)] = np.sum(self.P_k, axis=1)
 
-        # first: step_P_k for each oscillator
-        for k in range(len(self.P_k[relative_index])):
-            self.step_P_k(relative_index, k)
-
-        # scnd: sum P_k (each oscillator) to get total P
-        sum = 0
-        for k_value in self.P_k[relative_index]:
-            sum += k_value
-        self.grid.P[grid_index] = sum
-
-    def step_J_p_k(self, relative_index, k):
-        grid_index = relative_index + self.start_of_media
-        self.J_p_k[relative_index][k] = self.b[k] * self.J_p_k[relative_index][k] + self.a[k]*(eps0 * np.matmul(self.chi_matrix[k], self.E_vec(grid_index)) - self.P_k[relative_index][k])
-
-    def step_J_p(self, grid_index):
+    def step_J_p(self):
         # define relative_index
-        relative_index = grid_index - self.start_of_media
+        E_matrix = np.zeros(shape=(len(self.position), 3))
+        for ind, pos in zip(range(len(self.position)), self.position):
+            E_matrix[ind] = [self.grid.Ez[pos]**i for i in range(1, 4)]
 
-        # first: step_J_p_k for each oscillator
-        for k in range(len(self.J_p_k[relative_index])):
-            self.step_J_p_k(relative_index, k)
+        self.J_p_k[0:len(self.position)] = self.b * self.J_p_k[0:len(self.position)] + \
+                                           self.a * (eps0 * np.matmul(E_matrix, self.chi_matrix)[0:len(self.position)] - self.P_k[0:len(self.position)])
 
-        # scnd: sum J_p_k (each oscillator) to get total J_p
-        sum = 0
-        for k_value in self.J_p_k[relative_index]:
-            sum += k_value
-        self.grid.J_p[grid_index] = sum
+        self.grid.J_p[self.position[0]:(self.position[-1] + 1)] = np.sum(self.J_p_k, axis=1)
 
 class CustomMedia(Vacuum):
     # UNDER CONSTRUCTION!!!
