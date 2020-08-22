@@ -17,7 +17,7 @@ def visualize(Grid):
     axes[0].set_ylabel(r'$E_z$', fontsize=12, rotation=0)
     axes[0].set_title('time passed: {0:.3e}s,  timesteps passed: {timesteps}'.format(Grid.time_passed,
                                                                                 timesteps=Grid.timesteps_passed))
-    axes[0].set_ylim([-1.5, 1.5])
+    #axes[0].set_ylim([-1.5, 1.5])
     axes[1].plot(Grid.Hy)
     axes[1].xaxis.grid(linestyle='dotted')
     axes[1].set_xlabel('Cell')

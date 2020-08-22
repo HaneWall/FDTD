@@ -75,7 +75,7 @@ class E_FFTObserver(ParentObserver):
         self.type = 'E'
         self.first_timestep = first_timestep
         self.second_timestep = second_timestep
-        self.observed_E = np.zeros(self.second_timestep-self.first_timestep)
+        self.observed_E = np.zeros(self.second_timestep-self.first_timestep + 1)
         self.Ez_fft = None
 
     @cached_property
@@ -93,7 +93,7 @@ class E_FFTObserver(ParentObserver):
             self.observed_E[self.grid.timesteps_passed-self.first_timestep] = (self.grid.Ez[self.position])
 
     # store Ez (and Ez_fft) in order to analyze data wo computing simulation again
-    def store_Ez_data(self, filename, benchmark_name='No_Name'):
+    ''' def store_Ez_data(self, filename, benchmark_name='No_Name'):
         if self.grid.benchmark_type is None:
             filepath_0 = os.path.join(os.path.dirname(__file__), 'saved_data/own_setups')
 
@@ -101,7 +101,7 @@ class E_FFTObserver(ParentObserver):
             filepath_0 = os.path.join(os.path.dirname(__file__), 'saved_data/'+self.grid.benchmark_type+'/'+benchmark_name)
 
         filepath_1 = os.path.join(filepath_0, filename)
-        np.save(filepath_1, self.observed_E)
+        np.save(filepath_1, self.observed_E)'''
 
 
 
@@ -116,7 +116,7 @@ class P_FFTObserver(ParentObserver):
         self.type = 'P'
         self.first_timestep = first_timestep
         self.second_timestep = second_timestep
-        self.observed_P = np.zeros(self.second_timestep-self.first_timestep)
+        self.observed_P = np.zeros(self.second_timestep - self.first_timestep + 1)
         self.P_fft = None
 
     @cached_property
@@ -132,7 +132,7 @@ class P_FFTObserver(ParentObserver):
         if self.grid.timesteps_passed in range(self.first_timestep, self.second_timestep + 1):
             self.observed_P[self.grid.timesteps_passed-self.first_timestep] = self.grid.P[self.position]
 
-    def store_P_data(self, filename, benchmark_name='No_Name'):
+    '''  def store_P_data(self, filename, benchmark_name='No_Name'):
         if self.grid.benchmark_type is None:
             filepath_0 = os.path.join(os.path.dirname(__file__), 'saved_data/own_setups')
 
@@ -142,5 +142,5 @@ class P_FFTObserver(ParentObserver):
 
         filepath_1 = os.path.join(filepath_0, filename)
         np.save(filepath_1, self.observed_P)
-
+    '''
 

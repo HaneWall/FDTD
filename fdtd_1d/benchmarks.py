@@ -1,6 +1,7 @@
 import numpy as np
 import csv
 import os
+import time
 import fdtd_1d as f
 import matplotlib.pyplot as plt
 from .constants import c0, BLUE, CYAN, TEAL, ORANGE, RED, MAGENTA, GREY
@@ -53,6 +54,7 @@ class benchmark:
         os.mkdir(path=self.dir_path)
 
     def store_obs_data(self):
+        self.allocate_directory()
         for grid in self.grids:
             grid.store_obs_data(benchmark=True, benchmark_name=self.name)
 
@@ -256,6 +258,76 @@ class Harmonic_Slab_Lorentz_Setup(benchmark):
         self._set_N_lambda()
         self._visualize()
 
+class QPM_Length(benchmark):
+
+    def __init__(self, number_of_lambdas, timesteps, name, peak_timestep, pulse_duration, number_of_distributed_observer):
+        super().__init__(name=name, benchmark_type='qpm_harmonic_length')
+        self.no_of_lambdas = number_of_lambdas
+        self.half_qpm = 737
+        self.dx = 4e-09
+        self.timesteps = timesteps
+        self.nx = self.no_of_lambdas * (2*self.half_qpm + 1) + 10           # 10 is just a buffer to place boundarys and src
+        self.start_media = 5
+        self.ending_indices = np.array([self.start_media + i*737 for i in range(self.no_of_lambdas*2 + 1)])
+        self.peak_timestep = peak_timestep
+        self.pulse_duration = pulse_duration
+        self.no_observer = number_of_distributed_observer
+        self.obs_distance = (self.nx - 10)//self.no_observer
+        self.obs_positions = np.array([5 + i*self.obs_distance for i in range(self.no_observer)])
+
+    def _create_grid(self):
+        qpm_grid = f.Grid(nx=self.nx, dx=self.dx, benchmark='qpm_harmonic_length')
+        self.grids.append(qpm_grid)
+
+        for indices in range(len(self.ending_indices) - 1):
+            if indices % 2 == 0:
+                    qpm_grid[self.ending_indices[indices]:self.ending_indices[indices + 1]] = f.LorentzMedium(
+                        name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0],
+                        chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
+
+            else:
+                    qpm_grid[self.ending_indices[indices]:self.ending_indices[indices + 1]] = f.LorentzMedium(
+                        name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[-30.e-12, 0, 0],
+                        chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
+
+        qpm_grid[3] = f.GaussianImpulseWithFrequency(name='Varin', Intensity=5*10e12, wavelength=1.064e-06, pulse_duration=self.pulse_duration, peak_timestep=self.peak_timestep, tfsf=True)
+
+        for pos in self.obs_positions:
+            qpm_grid[int(pos)] = f.E_FFTObserver(name='Varin', first_timestep=0, second_timestep=self.timesteps - 1)
+
+        qpm_grid[0] = f.LeftSideMur()
+        qpm_grid[self.nx - 1] = f.RightSideMur()
+
+        # step 6: run simulation
+        qpm_grid.run_timesteps(timesteps=self.timesteps, vis=True)
+
+    def _allocate_memory(self):
+        self.observed_data = np.zeros(shape=(self.no_observer, self.timesteps))
+        observer_object_list = np.array(self.grids[0].local_observers)
+        for obs_ind in range(self.no_observer):
+            self.observed_data[obs_ind][:] = observer_object_list[obs_ind].observed_E[:]
+        self.grid_information = np.array([self.grids[0].dt, self.grids[0].dx, self.no_of_lambdas, self.peak_timestep, self.pulse_duration])
+        self.relative_observer_pos = self.obs_positions - self.start_media
+
+    def store_obs_data(self):
+        start_time = time.time()
+        self.allocate_directory()
+        self._allocate_memory()
+
+        file_grid_info = os.path.join(self.dir_path, 'info.npy')
+        file_relative_pos = os.path.join(self.dir_path, 'relative_ind.npy')
+        file_data = os.path.join(self.dir_path, 'E_data.npy')
+
+        np.save(file_grid_info, arr=self.grid_information)
+        np.save(file_relative_pos, arr=self.relative_observer_pos)
+        np.save(file_data, arr=self.observed_data)
+        print("saved in --- %s seconds ---" % (time.time() - start_time))
+
+    def run_benchmark(self):
+        start_time = time.time()
+        self._create_grid()
+        print("computed in --- %s seconds ---" % (time.time() - start_time))
+
 class Quasi_Phase_Matching(benchmark):
     ''' reproduces paper QuasiPhaseMatching from Varin's Paper '''
 
@@ -276,7 +348,6 @@ class Quasi_Phase_Matching(benchmark):
         self.start_media = 5
         self.ending_indices = [self.start_media + i*737 for i in range(self.lambda_qpm*2 + 1)]
         self.peak_timestep = peak_timestep
-        self.allocate_directory()
 
 
     def _create_grid(self):

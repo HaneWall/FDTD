@@ -6,14 +6,6 @@ from .constants import c0, eps0, mu0
 from .visuals import visualize, AnimateTillTimestep, visualize_permittivity, visualize_fft
 from .observer import QuasiHarmonicObserver, E_FFTObserver, P_FFTObserver
 from werkzeug.utils import cached_property
-'''
-def curl_Ez(field, cell):
-    return field[cell + 1] - field[cell]
-
-
-def curl_Hy(field, cell):
-    return field[cell] - field[cell - 1]
-'''
 
 
 class Grid:

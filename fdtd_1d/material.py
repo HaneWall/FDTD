@@ -84,8 +84,8 @@ class LorentzMedium(Vacuum):
         self.eps = eps_inf
         self.mu = permeability
         self.conductivity = conductivity
-        self.gamma = gamma
-        self.w_0 = w0
+        self.gamma = np.array(gamma)
+        self.w_0 = np.array(w0)
         self.chi_1 = chi_1
         self.chi_2 = chi_2
         self.chi_3 = chi_3
@@ -131,7 +131,7 @@ class LorentzMedium(Vacuum):
     def epsilon_complex(self, omega):
         eps_complex = self.eps
         for w_k, gamma_k, chi_1_k in zip(self.w_0, self.gamma, self.chi_1):
-            eps_complex += chi_1_k * (w_k ** 2) / (w_k ** 2 - omega ** 2 - 1j * gamma_k * omega)
+            eps_complex += chi_1_k * (w_k**2) / (w_k**2 - omega**2 - 1j * gamma_k * omega)
         return eps_complex
 
     def step_P(self):
@@ -143,6 +143,10 @@ class LorentzMedium(Vacuum):
         self.grid.P[self.position[0]:(self.position[-1] + 1)] = np.sum(self.P_k, axis=1)
 
     def step_J_p(self):
+        if self.J_p_k is None:
+            self._allocate_J_p_k()
+            self._allocate_P_k()
+
         # define relative_index
         E_matrix = np.zeros(shape=(len(self.position), 3))
         for ind, pos in zip(range(len(self.position)), self.position):

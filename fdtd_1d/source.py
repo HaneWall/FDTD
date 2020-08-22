@@ -47,6 +47,8 @@ class GaussianImpulse(ParentSource):
             self.grid.Hy[self.position - 1] += -np.sqrt(eps0/mu0) * self.ampl * np.exp(-0.5 * ((self.peak_timestep -
                                                       self.grid.timesteps_passed) / self.sigma) ** 2)
 
+
+
 class SinusoidalImpulse(ParentSource):
     '''creates oscillating source'''
     # currently only supports E-Sources
@@ -79,6 +81,37 @@ class SinusoidalImpulse(ParentSource):
             pass
         else:
             self.grid.Hy[self.position - 1] += -np.sqrt(eps0/mu0) * self.ampl * np.sin(self.omega * self.grid.time_passed + self.phase)
+
+
+class GaussianImpulseWithFrequency(ParentSource):
+    def __init__(self, name, Intensity, peak_timestep, pulse_duration, wavelength, tfsf=False, phase=0):
+        super().__init__()
+        self.tfsf = tfsf
+        self.peak_timestep = peak_timestep
+        self.source_name = name
+        self.lamb = wavelength
+        self.phase = phase
+        self.pulse_duration = pulse_duration
+        self.intensity = Intensity
+
+    @cached_property
+    def omega(self):
+        return 2 * np.pi * c0 / self.lamb
+
+    @cached_property
+    def ampl(self):
+        return np.sqrt(2*np.sqrt(mu0/eps0)*self.intensity)
+
+    def step_Ez(self):
+        self.grid.Ez[self.position] += self.ampl * np.exp(-2*np.log(2)*(((self.peak_timestep - self.grid.timesteps_passed)*self.grid.dt)/self.pulse_duration)**2) \
+                                       * np.sin(self.omega * self.grid.time_passed + self.phase)
+
+    def step_Hy(self):
+        if not self.tfsf:
+            pass
+        else:
+            self.grid.Hy[self.position - 1] += -np.sqrt(eps0/mu0) * self.ampl * np.exp(-2*np.log(2)*(((self.peak_timestep - self.grid.timesteps_passed)*self.grid.dt)/self.pulse_duration)**2) \
+                                       * np.sin(self.omega * self.grid.time_passed + self.phase)
 
 class EnvelopeSinus(ParentSource):
     '''creates an enveloped oscillation (ampl * gaussian_impulse * sin(wt + phase))'''
