@@ -12,18 +12,15 @@ import fdtd_1d as f
 #setup_3.run_benchmark()
 #setup_3.store_obs_data()
 
+setup5 = f.QPM_end_P(name='P_at_end_30000_1lambda', peak_timestep=12000, timesteps=30000, pulse_duration=20e-15, number_of_lambdas=1)
+setup5.run_benchmark()
+setup5.store_obs_data()
 
-#setup_4 = f.Quasi_Phase_Matching(number_of_lambdas=6, timesteps=30000, courant=1, name='six_lambda_30000_courant_1_timestep_peak_8000_analyze_shg_even_smaller_peak', peak_timestep=8000, mode='length', distrubuted_observer=300)
-#setup_4.run_benchmark()
-#setup_4.store_obs_data()
+#setup6 = f.QPM_Length(name='500obs_10fs_8000pt', number_of_lambdas=6, timesteps=30000, peak_timestep=8000, pulse_duration=10e-15, number_of_distributed_observer=500)
+#setup6.run_benchmark()
+#setup6.store_obs_data()
 
-#setup_5 = f.Quasi_Phase_Matching(number_of_lambdas=3, timesteps=30, courant=1, name='testing_new_database2', peak_timestep=8000, mode='length')
-#setup_5.run_benchmark()
-#setup_5.store_obs_data()
 
-setup6 = f.QPM_Length(name='npy_format_test', number_of_lambdas=6, timesteps=30000, peak_timestep=8000, pulse_duration=20e-15, number_of_distributed_observer=300)
-setup6.run_benchmark()
-setup6.store_obs_data()
 # Or build your own setup
 
 # Step 1: init grid
