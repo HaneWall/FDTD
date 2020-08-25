@@ -8,13 +8,13 @@ import fdtd_1d as f
 #setup_3 = f.Harmonic_Slab_Lorentz_Setup(name='new_numpy_step_P', dx=[4/6 * 3.91e-07], length_grid_in_dx=[50], length_media_in_dx=[30], start_index_media=5, wavelength=1.75e-05, eps_inf=1.5, chi_1=[5.1], chi_2=[0], chi_3=[0], conductivity=0, w0=[1.2566e14], gamma=[8e12], ampl=1, timesteps=[6000])
 #setup_3.run_benchmark()
 
-#setup_3 = f.Harmonic_Slab_Lorentz_Setup(name='new_data_files_per_terminal', dx=[2/6 * 3.91e-07, 4/6 * 3.91e-07, 6/6 * 3.91e-07], length_grid_in_dx=[100, 55, 40], length_media_in_dx=[90, 45, 30], start_index_media=5, wavelength=1.75e-05, eps_inf=1.05, chi_1=[2.1, 2.4], chi_2=[0, 0], chi_3=[0, 0], conductivity=0, w0=[1.2566e14, 1.2e13], gamma=[8e12, 9e14], ampl=1, timesteps=[15000, 7500, 5000], courant=1)
-#setup_3.run_benchmark()
+setup_3 = f.Harmonic_Slab_Lorentz_Setup(name='new_data_files_per_terminal', dx=[2/6 * 3.91e-07, 4/6 * 3.91e-07, 6/6 * 3.91e-07], length_grid_in_dx=[100, 55, 40], length_media_in_dx=[90, 45, 30], start_index_media=5, wavelength=1.75e-05, eps_inf=1.05, chi_1=[2.1, 2.4], chi_2=[0, 0], chi_3=[0, 0], conductivity=0, w0=[1.2566e14, 1.2e13], gamma=[8e12, 9e14], ampl=1, timesteps=[15000, 7500, 5000], courant=1)
+setup_3.run_benchmark()
 #setup_3.store_obs_data()
 
-setup5 = f.QPM_end_P(name='P_at_end_30000_1lambda', peak_timestep=12000, timesteps=30000, pulse_duration=20e-15, number_of_lambdas=1)
-setup5.run_benchmark()
-setup5.store_obs_data()
+#setup5 = f.QPM_end_P(name='P_at_end_30000_1lambda', peak_timestep=12000, timesteps=30000, pulse_duration=20e-15, number_of_lambdas=1)
+#setup5.run_benchmark()
+#setup5.store_obs_data()
 
 #setup6 = f.QPM_Length(name='500obs_10fs_8000pt', number_of_lambdas=6, timesteps=30000, peak_timestep=8000, pulse_duration=10e-15, number_of_distributed_observer=500)
 #setup6.run_benchmark()
