@@ -112,6 +112,7 @@ class Grid:
         # updating polarisation P
         for mat in self.materials:
             mat.step_P()
+            mat.step_Q()
 
         # saving Ez - boundaries
         for bound in self.boundaries:
@@ -146,6 +147,7 @@ class Grid:
         # updating polarisation current J_
         for mat in self.materials:
             mat.step_J_p()
+            mat.step_G()
 
         # saving local points in order to extract phase and amplitude data
         for observer in self.local_observers:

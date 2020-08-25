@@ -124,6 +124,14 @@ class LorentzMedium(Vacuum):
         chi_m = np.array([self.chi_1, self.chi_2, self.chi_3])
         return chi_m
 
+    @property
+    def P_Tilde(self):
+        E_matrix = np.zeros(shape=(len(self.position), 3))
+        for ind, pos in zip(range(len(self.position)), self.position):
+            E_matrix[ind] = [self.grid.Ez[pos] ** i for i in range(1, 4)]
+
+        return eps0 * np.matmul(E_matrix, self.chi_matrix)
+
     def epsilon_real(self, omega):
         eps_real = np.real(self.epsilon_complex(omega))
         return eps_real
@@ -138,6 +146,7 @@ class LorentzMedium(Vacuum):
             eps_complex += chi_1_k * (w_k**2) / (w_k**2 - omega**2 - 1j * gamma_k * omega)
         return eps_complex
 
+
     def step_P(self):
         if self.J_p_k is None:
             self._allocate_J_p_k()
@@ -151,13 +160,9 @@ class LorentzMedium(Vacuum):
             self._allocate_J_p_k()
             self._allocate_P_k()
 
-        # define relative_index
-        E_matrix = np.zeros(shape=(len(self.position), 3))
-        for ind, pos in zip(range(len(self.position)), self.position):
-            E_matrix[ind] = [self.grid.Ez[pos]**i for i in range(1, 4)]
 
         self.J_p_k[0:len(self.position)] = self.b * self.J_p_k[0:len(self.position)] + \
-                                           self.a * (eps0 * np.matmul(E_matrix, self.chi_matrix)[0:len(self.position)] - self.P_k[0:len(self.position)])
+                                           self.a * (self.P_Tilde[0:len(self.position)] - self.P_k[0:len(self.position)])
 
         self.grid.J_p[self.position[0]:(self.position[-1] + 1)] = np.sum(self.J_p_k, axis=1)
 
@@ -176,13 +181,12 @@ class CentroRamanMedium(Vacuum):
         self.w_0 = np.array(w0)
         self.w_R = np.array(wr)
         self.chi_1 = chi_1
-        self.chi_2 = np.zeros(len(self.chi_1))
         self.chi_3 = chi_3
         self.J_p_k = None
         self.P_k = None
         self.G_k = None
         self.Q_k = None
-        self.alpha = None
+        self.alpha = np.array(alpha)
         self.start_of_media = None
 
     @cached_property
@@ -211,9 +215,32 @@ class CentroRamanMedium(Vacuum):
 
     @cached_property
     def chi_matrix(self):
-        chi_m = np.array([self.chi_1, self.chi_2, self.chi_3])
+        chi_m = np.array([self.chi_1, self.chi_3])
         return chi_m
 
+    @cached_property
+    def raman_factor(self):
+        pre_raman = np.tile( np.transpose((1 - self.alpha) * self.chi_matrix[1]), (len(self.position), 1))
+        #print(np.shape(pre_raman))
+        return pre_raman
+
+    @property
+    def E_matrix(self):
+        E_matrix = np.zeros(shape=(len(self.position), 3))
+        for ind, pos in zip(range(len(self.position)), self.position):
+            E_matrix[ind] = [self.grid.Ez[pos] ** i for i in [1, 2, 3]]
+        return E_matrix
+
+    @property
+    def P_Tilde(self):
+        first_order_term = np.matmul(np.transpose(self.chi_matrix[0]), np.transpose(self.E_matrix[:][0]))
+        third_order_term = np.matmul(np.transpose(self.alpha * self.chi_matrix[1]), np.transpose(self.E_matrix[:][2]))
+        E_1_matrix = np.transpose(np.tile(np.transpose(self.E_matrix)[0], (len(self.chi_1), 1)))
+
+        print(np.shape(E_1_matrix))
+        raman_term = self.raman_factor * self.Q_k * E_1_matrix
+
+        return eps0 * (np.transpose(first_order_term) + np.transpose(third_order_term) + raman_term)
 
     def _allocate_J_p_k(self):
         self.J_p_k = np.zeros(shape=(len(self.position), len(self.chi_1)))
@@ -228,32 +255,47 @@ class CentroRamanMedium(Vacuum):
         self.Q_k = np.zeros(shape=(len(self.position), len(self.chi_1)))
 
 
-
-
     def step_P(self):
         if self.J_p_k is None:
-            self._allocate_J_p_k()
             self._allocate_P_k()
+            self._allocate_J_p_k()
+            self._allocate_G_k()
+            self._allocate_Q_k()
 
         self.P_k[0:len(self.position)] = self.P_k[0:len(self.position)] + self.grid.dt * self.J_p_k[0:len(self.position)]
         self.grid.P[self.position[0]:(self.position[-1] + 1)] = np.sum(self.P_k, axis=1)
 
     def step_J_p(self):
         if self.J_p_k is None:
-            self._allocate_J_p_k()
             self._allocate_P_k()
-
-        # define relative_index
-        E_matrix = np.zeros(shape=(len(self.position), 3))
-        for ind, pos in zip(range(len(self.position)), self.position):
-            E_matrix[ind] = [self.grid.Ez[pos]**i for i in range(1, 4)]
+            self._allocate_J_p_k()
+            self._allocate_G_k()
+            self._allocate_Q_k()
 
         self.J_p_k[0:len(self.position)] = self.b * self.J_p_k[0:len(self.position)] + \
-                                           self.a * (eps0 * np.matmul(E_matrix, self.chi_matrix)[0:len(self.position)] - self.P_k[0:len(self.position)])
+                                           self.a * (self.P_Tilde[0:len(self.position)] - self.P_k[0:len(self.position)])
 
         self.grid.J_p[self.position[0]:(self.position[-1] + 1)] = np.sum(self.J_p_k, axis=1)
 
+    def step_G(self):
+        if self.J_p_k is None:
+            self._allocate_P_k()
+            self._allocate_J_p_k()
+            self._allocate_G_k()
+            self._allocate_Q_k()
 
+        self.G_k[0:len(self.position)] = self.d *self.G_k[0:len(self.position)] + self.c * \
+                                         (np.transpose(np.tile(np.transpose(self.E_matrix)[1], (len(self.chi_1), 1))) - self.Q_k[0:len(self.position)])
+        print(np.shape(self.G_k))
+
+    def step_Q(self):
+        if self.J_p_k is None:
+            self._allocate_P_k()
+            self._allocate_J_p_k()
+            self._allocate_G_k()
+            self._allocate_Q_k()
+
+        self.Q_k[0:len(self.position)] = self.Q_k[0:len(self.position)] + self.grid.dt * self.G_k[0:len(self.position)]
 
 class CustomMedia(Vacuum):
     # UNDER CONSTRUCTION!!!

@@ -8,8 +8,8 @@ import fdtd_1d as f
 #setup_3 = f.Harmonic_Slab_Lorentz_Setup(name='new_numpy_step_P', dx=[4/6 * 3.91e-07], length_grid_in_dx=[50], length_media_in_dx=[30], start_index_media=5, wavelength=1.75e-05, eps_inf=1.5, chi_1=[5.1], chi_2=[0], chi_3=[0], conductivity=0, w0=[1.2566e14], gamma=[8e12], ampl=1, timesteps=[6000])
 #setup_3.run_benchmark()
 
-setup_3 = f.Harmonic_Slab_Lorentz_Setup(name='new_data_files_per_terminal', dx=[2/6 * 3.91e-07, 4/6 * 3.91e-07, 6/6 * 3.91e-07], length_grid_in_dx=[100, 55, 40], length_media_in_dx=[90, 45, 30], start_index_media=5, wavelength=1.75e-05, eps_inf=1.05, chi_1=[2.1, 2.4], chi_2=[0, 0], chi_3=[0, 0], conductivity=0, w0=[1.2566e14, 1.2e13], gamma=[8e12, 9e14], ampl=1, timesteps=[15000, 7500, 5000], courant=1)
-setup_3.run_benchmark()
+#setup_3 = f.Harmonic_Slab_Lorentz_Setup(name='new_data_files_per_terminal', dx=[2/6 * 3.91e-07, 4/6 * 3.91e-07, 6/6 * 3.91e-07], length_grid_in_dx=[100, 55, 40], length_media_in_dx=[90, 45, 30], start_index_media=5, wavelength=1.75e-05, eps_inf=1.05, chi_1=[2.1, 2.4], chi_2=[0, 0], chi_3=[0, 0], conductivity=0, w0=[1.2566e14, 1.2e13], gamma=[8e12, 9e14], ampl=1, timesteps=[15000, 7500, 5000], courant=1)
+#setup_3.run_benchmark()
 #setup_3.store_obs_data()
 
 #setup5 = f.QPM_end_P(name='P_at_end_30000_1lambda', peak_timestep=12000, timesteps=30000, pulse_duration=20e-15, number_of_lambdas=1)
@@ -24,12 +24,12 @@ setup_3.run_benchmark()
 # Or build your own setup
 
 # Step 1: init grid
-#test = f.Grid(1500, 4e-09) # creates 201 grid cells (á 4.0e-09m)
+test = f.Grid(200, 4e-09) # creates 201 grid cells (á 4.0e-09m)
 
 # Step 2: init media
 #test[20:40] = f.NonDispersiveMedia(name='Media4Epsleft', permeability=1, permittivity=3, conductivity=0)
 #test[30:45] = f.LorentzMedium(name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0], chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
-
+test[100:180] = f.CentroRamanMedium(name='test', chi_1=[0.69617, 0.40794, 0.89748], w0=[2.7537e16, 1.6205e16, 1.9034e14], chi_3=[1.94e-22, 0, 0], alpha=[0.7, 0, 0], wr=[8.7722e13, 0, 0], gamma_K=[0, 0, 0], gamma_R=[3.1250e13, 0, 0], permeability=1, conductivity=0, eps_inf=1)
 
 #test[15:30] = f.LorentzMedium(name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0], chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
 #test[30:45] = f.LorentzMedium(name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[-30.e-12, 0, 0], chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
@@ -77,7 +77,7 @@ setup_3.run_benchmark()
 #test[1499] = f.RightSideMur()
     
 # Step 6: run simulation
-#test.run_timesteps(900)
+test.run_timesteps(900)
 #test.animate_timesteps(60000)
 
 # Step 7: misc
