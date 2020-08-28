@@ -1,5 +1,5 @@
 from .grid import Grid
-from .source import ParentSource, GaussianImpulse, SinusoidalImpulse, EnvelopeSinus, ActivatedSinus, GaussianImpulseWithFrequency
+from .source import ParentSource, GaussianImpulse, SinusoidalImpulse, EnvelopeSinus, ActivatedSinus, GaussianImpulseWithFrequency, SechEnveloped
 from .material import Vacuum, CustomMedia, NonDispersiveMedia, LorentzMedium, CentroRamanMedium
 from .boundary import Boundary, LeftSideGridBoundary, RightSideGridBoundary, LeftSideMur, RightSideMur
 from .visuals import visualize, AnimateTillTimestep, visualize_permittivity

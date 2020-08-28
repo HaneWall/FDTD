@@ -276,18 +276,18 @@ class QPM_Length(benchmark):
         self.obs_positions = np.array([5 + i*self.obs_distance for i in range(self.no_observer)])
 
     def _create_grid(self):
-        qpm_grid = f.Grid(nx=self.nx, dx=self.dx, benchmark='qpm_harmonic_length')
+        qpm_grid = f.Grid(nx=self.nx, dx=self.dx, benchmark='qpm_harmonic_length', courant=0.5)
         self.grids.append(qpm_grid)
 
         for indices in range(len(self.ending_indices) - 1):
             if indices % 2 == 0:
                     qpm_grid[self.ending_indices[indices]:self.ending_indices[indices + 1]] = f.LorentzMedium(
-                        name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0],
+                        name='Varin', permeability=1, eps_inf=1.0, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0],
                         chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
 
             else:
                     qpm_grid[self.ending_indices[indices]:self.ending_indices[indices + 1]] = f.LorentzMedium(
-                        name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[-30.e-12, 0, 0],
+                        name='Varin', permeability=1, eps_inf=1.0, chi_1=[2.42, 9.65, 1.46], chi_2=[-30.e-12, 0, 0],
                         chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
 
         qpm_grid[3] = f.GaussianImpulseWithFrequency(name='Varin', Intensity=5*10e12, wavelength=1.064e-06, pulse_duration=self.pulse_duration, peak_timestep=self.peak_timestep, tfsf=True)
@@ -295,8 +295,12 @@ class QPM_Length(benchmark):
         for pos in self.obs_positions:
             qpm_grid[int(pos)] = f.E_FFTObserver(name='Varin', first_timestep=0, second_timestep=self.timesteps - 1)
 
-        qpm_grid[0] = f.LeftSideMur()
-        qpm_grid[self.nx - 1] = f.RightSideMur()
+
+        qpm_grid[0] = f.LeftSideGridBoundary()
+        qpm_grid[self.nx - 1] = f.RightSideGridBoundary()
+
+        #qpm_grid[0] = f.LeftSideMur()
+        #qpm_grid[self.nx - 1] = f.RightSideMur()
 
         # step 6: run simulation
         qpm_grid.run_timesteps(timesteps=self.timesteps, vis=True)
@@ -350,18 +354,18 @@ class QPM_end_P(benchmark):
         self.position_E_obs = self.nx - 8
 
         # step 1: init grid
-        qpm_grid = f.Grid(nx=self.nx, dx=self.dx, benchmark='qpm_harmonic')
+        qpm_grid = f.Grid(nx=self.nx, dx=self.dx, benchmark='qpm_harmonic', courant=0.5)
         self.grids.append(qpm_grid)
 
         for indices in range(len(self.ending_indices) - 1):
             if indices % 2 == 0:
                 qpm_grid[self.ending_indices[indices]:self.ending_indices[indices + 1]] = f.LorentzMedium(
-                    name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0],
+                    name='Varin', permeability=1, eps_inf=1.0, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0],
                     chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
 
             else:
                 qpm_grid[self.ending_indices[indices]:self.ending_indices[indices + 1]] = f.LorentzMedium(
-                    name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[-30.e-12, 0, 0],
+                    name='Varin', permeability=1, eps_inf=1.0, chi_1=[2.42, 9.65, 1.46], chi_2=[-30.e-12, 0, 0],
                     chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
 
         qpm_grid[3] = f.GaussianImpulseWithFrequency(name='Varin', Intensity=10e12, wavelength=1.064e-06,
@@ -372,8 +376,11 @@ class QPM_end_P(benchmark):
         qpm_grid[self.position_E_obs] = f.E_FFTObserver(name='Varin', first_timestep=0, second_timestep=self.timesteps - 1)
         qpm_grid[self.position_P_obs] = f.P_FFTObserver(name='Varin', first_timestep=0, second_timestep=self.timesteps - 1)
 
-        qpm_grid[0] = f.LeftSideMur()
-        qpm_grid[self.nx - 1] = f.RightSideMur()
+        qpm_grid[0] = f.LeftSideGridBoundary()
+        qpm_grid[self.nx - 1] = f.RightSideGridBoundary()
+
+        #qpm_grid[0] = f.LeftSideMur()
+        #qpm_grid[self.nx - 1] = f.RightSideMur()
 
         # step 6: run simulation
         qpm_grid.run_timesteps(timesteps=self.timesteps, vis=True)

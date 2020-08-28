@@ -169,6 +169,7 @@ class LorentzMedium(Vacuum):
 
 class CentroRamanMedium(Vacuum):
 
+
     def __init__(self, name, permeability, conductivity, eps_inf, gamma_K, gamma_R, w0, chi_1, chi_3, alpha, wr):
         super().__init__()
         self.material_name = name
@@ -237,7 +238,6 @@ class CentroRamanMedium(Vacuum):
         third_order_term = np.matmul(np.transpose(self.alpha * self.chi_matrix[1]), np.transpose(self.E_matrix[:][2]))
         E_1_matrix = np.transpose(np.tile(np.transpose(self.E_matrix)[0], (len(self.chi_1), 1)))
 
-        print(np.shape(E_1_matrix))
         raman_term = self.raman_factor * self.Q_k * E_1_matrix
 
         return eps0 * (np.transpose(first_order_term) + np.transpose(third_order_term) + raman_term)
@@ -286,7 +286,6 @@ class CentroRamanMedium(Vacuum):
 
         self.G_k[0:len(self.position)] = self.d *self.G_k[0:len(self.position)] + self.c * \
                                          (np.transpose(np.tile(np.transpose(self.E_matrix)[1], (len(self.chi_1), 1))) - self.Q_k[0:len(self.position)])
-        print(np.shape(self.G_k))
 
     def step_Q(self):
         if self.J_p_k is None:

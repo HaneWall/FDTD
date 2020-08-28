@@ -6,7 +6,7 @@ import numpy as np
 from fdtd_1d.constants import c0, eps0, mu0, BLUE, CYAN, TEAL, ORANGE, RED, MAGENTA, GREY
 from matplotlib.colors import LogNorm
 from matplotlib import ticker
-from scipy.signal import get_window
+from scipy.signal import get_window, hilbert
 
 
 color_spec = [BLUE, CYAN, TEAL, ORANGE, RED, MAGENTA, GREY]
@@ -150,25 +150,49 @@ class Load_QPM_length(Case):
         print("loaded in --- %s seconds ---" % (time.time() - start_time))
 
     def zero_pad(self, number_of_zeros):
-        self.padded_observed_data = np.pad(self.observed_data[0:self.no_observer][:], [(0, 0), (0, number_of_zeros)], constant_values=0)
+        self.padded_observed_data = np.pad(self.observed_data[0:self.no_observer][:], [(0, 0), (number_of_zeros, number_of_zeros)], constant_values=0)
 
     def set_fft_limits(self, past_from_max, future_from_max):
         self.windowed_data = np.zeros(shape=(self.no_observer, (past_from_max + future_from_max + 1)))
 
-        #TODO: this is pretty bad, because the phase is almost never symmetric
-        abs_obs = np.abs(self.padded_observed_data[0:self.no_observer][:])
-        observer_max_ts = np.argmax(abs_obs[0:self.no_observer][:], axis=1)
-        begin = np.array(observer_max_ts-past_from_max)
-        end = np.array(observer_max_ts+future_from_max + 1)
-        for obs in range(self.no_observer):
-            self.windowed_data[obs][:] = self.padded_observed_data[obs][begin[obs]:end[obs]]
+        if self.padded_observed_data is not None:
+            x, y = np.shape(self.padded_observed_data)
+            self.analytical_signal = np.empty(shape=(self.no_observer, y), dtype='complex_')
+            self.envelope_amplitude = np.zeros(shape=(self.no_observer, y))
+            for obs in range(self.no_observer):
+                self.analytical_signal[obs] = hilbert(self.padded_observed_data[obs][:])
+                self.envelope_amplitude[obs] = np.abs(self.analytical_signal[obs][:])
+
+        else:
+            x, y = np.shape(self.observed_data)
+            self.analytical_signal = np.empty(shape=(self.no_observer, y), dtype='complex_')
+            self.envelope_amplitude = np.zeros(shape=(self.no_observer, y))
+            for obs in range(self.no_observer):
+                self.analytical_signal[obs] = hilbert(self.observed_data[obs][:])
+                self.envelope_amplitude[obs] = np.abs(self.analytical_signal[obs][:])
+
+
+        self.max_timestep = np.zeros(self.no_observer)
+        self.max_timestep = np.argmax(self.envelope_amplitude[0:self.no_observer][:], axis=1)
+        begin = np.array(self.max_timestep - past_from_max)
+        end = np.array(self.max_timestep + future_from_max + 1)
+
+        if self.padded_observed_data is not None:
+            for obs in range(self.no_observer):
+                self.windowed_data[obs][:] = self.padded_observed_data[obs][begin[obs]:end[obs]]
+
+        else:
+            for obs in range(self.no_observer):
+                self.windowed_data[obs][:] = self.observed_data[obs][begin[obs]:end[obs]]
 
 
     def fft(self):
+
         if self.windowed_data is not None:
             x, y = np.shape(self.windowed_data)
             padded_length = y + self.zero_padding
             timesteps = padded_length
+            #hanning = get_window('blackman', timesteps)
             self.omega = 2 * np.pi * np.linspace(0, 1 / (2 * self.dt), timesteps // 2)
             self.fft_matrix = np.fft.fft(self.windowed_data[0:self.no_observer][:], n=padded_length)
             self.abs_fft = np.zeros(shape=(self.no_observer, timesteps//2))
@@ -184,7 +208,7 @@ class Load_QPM_length(Case):
             self.fft_matrix = np.fft.fft(self.padded_observed_data[0:self.no_observer][:])
             self.abs_fft = np.zeros(shape=(self.no_observer, timesteps // 2))
             for obs in range(self.no_observer):
-                self.abs_fft = 2 / timesteps * np.abs(self.fft_matrix[obs][0:timesteps//2])
+                self.abs_fft[obs][:] = 2 / timesteps * np.abs(self.fft_matrix[obs][0:timesteps//2])
             self.abs_fft_sqrd = self.abs_fft[:][:] ** 2
             abs_fft_sqrd_max = np.max(self.abs_fft_sqrd[:][:])
             self.normalized_abs_fft_sqrd = self.abs_fft_sqrd / abs_fft_sqrd_max
@@ -195,7 +219,7 @@ class Load_QPM_length(Case):
             self.fft_matrix = np.fft.fft(self.observed_data[0:self.no_observer][:])
             self.abs_fft = np.zeros(shape=(self.no_observer, timesteps // 2))
             for obs in range(self.no_observer):
-                self.abs_fft = 2 / timesteps * np.abs(self.fft_matrix[obs][0:timesteps//2])
+                self.abs_fft[obs][:] = 2 / timesteps * np.abs(self.fft_matrix[obs][0:timesteps//2])
             self.abs_fft_sqrd = self.abs_fft[:][:] ** 2
             abs_fft_sqrd_max = np.max(self.abs_fft_sqrd[:][:])
             self.normalized_abs_fft_sqrd = self.abs_fft_sqrd / abs_fft_sqrd_max
@@ -224,7 +248,7 @@ class Load_QPM_length(Case):
             shg_amplitude[obs] = self.abs_fft[obs][index_of_second]
 
         fig, axes = plt.subplots()
-        axes.plot(self.relative_observer_pos * self.dx, shg_amplitude/E_0, linestyle='dashed', linewidth=2)
+        axes.plot(self.relative_observer_pos * self.dx, shg_amplitude/E_0, linewidth=2)
         axes.set_xlim([0, 2.55e-05])
         axes.grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
         for i in range(int(self.no_lambdas)*2 + 1):
@@ -324,13 +348,11 @@ qpm_test_end_P.show_spectrum()
 '''
 
 
-
-qpm_test = Load_QPM_length('500obs_10fs_8000pt')
-qpm_test.show_trace()
-qpm_test.zero_pad(8000)
-qpm_test.set_fft_limits(past_from_max=8000, future_from_max=8000)
+qpm_test = Load_QPM_length('2000obs_10fs_16000pt_05courant_6lambda')
+qpm_test.zero_pad(50000)
+qpm_test.set_fft_limits(past_from_max=45000, future_from_max=45000)
 qpm_test.fft()
-qpm_test.visualize_over_frequencies()
+#qpm_test.visualize_over_frequencies()
 qpm_test.visualize_n_over_length(number_of_harmonic=2)
 
 
