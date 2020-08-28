@@ -290,7 +290,7 @@ class QPM_Length(benchmark):
                         name='Varin', permeability=1, eps_inf=1.0, chi_1=[2.42, 9.65, 1.46], chi_2=[-30.e-12, 0, 0],
                         chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
 
-        qpm_grid[3] = f.GaussianImpulseWithFrequency(name='Varin', Intensity=5*10e12, wavelength=1.064e-06, pulse_duration=self.pulse_duration, peak_timestep=self.peak_timestep, tfsf=True)
+        qpm_grid[3] = f.GaussianImpulseWithFrequency(name='Varin', Intensity=5*10e12, wavelength=1.064e-06, pulse_duration=self.pulse_duration, peak_timestep=self.peak_timestep, tfsf=False)
 
         for pos in self.obs_positions:
             qpm_grid[int(pos)] = f.E_FFTObserver(name='Varin', first_timestep=0, second_timestep=self.timesteps - 1)

@@ -16,10 +16,10 @@ class Grid:
         self.conductivity = np.zeros(nx)
         self.nx = nx                        # nx: number of cells in x-direction
         self.dx = dx                        # dx: width of one cell in m
-        self.Ez = np.zeros(nx)
-        self.Hy = np.zeros(nx)
-        self.J_p = np.zeros(nx)
-        self.P = np.zeros(nx)
+        self.Ez = np.zeros(nx, dtype=np.float128)
+        self.Hy = np.zeros(nx, dtype=np.float128)
+        self.J_p = np.zeros(nx, dtype=np.float128)
+        self.P = np.zeros(nx, dtype=np.float128)
         self.courant = courant                  # 1 = magic time step ( Taflove - numerical error is minimal )
         self.dt = dx * courant / c0
         self.timesteps = None
@@ -144,7 +144,7 @@ class Grid:
         for bound in self.boundaries:
             bound.step_Hy()
 
-        # updating polarisation current J_
+        # updating polarisation current J_p
         for mat in self.materials:
             mat.step_J_p()
             mat.step_G()

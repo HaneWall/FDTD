@@ -124,7 +124,7 @@ class LorentzMedium(Vacuum):
         chi_m = np.array([self.chi_1, self.chi_2, self.chi_3])
         return chi_m
 
-    @property
+
     def P_Tilde(self):
         E_matrix = np.zeros(shape=(len(self.position), 3))
         for ind, pos in zip(range(len(self.position)), self.position):
@@ -162,7 +162,7 @@ class LorentzMedium(Vacuum):
 
 
         self.J_p_k[0:len(self.position)] = self.b * self.J_p_k[0:len(self.position)] + \
-                                           self.a * (self.P_Tilde[0:len(self.position)] - self.P_k[0:len(self.position)])
+                                           self.a * (self.P_Tilde()[0:len(self.position)] - self.P_k[0:len(self.position)])
 
         self.grid.J_p[self.position[0]:(self.position[-1] + 1)] = np.sum(self.J_p_k, axis=1)
 
@@ -187,6 +187,11 @@ class CentroRamanMedium(Vacuum):
         self.P_k = None
         self.G_k = None
         self.Q_k = None
+
+
+        self.first_order_term = None
+        self.third_order_term = None
+
         self.alpha = np.array(alpha)
         self.start_of_media = None
 
@@ -221,8 +226,7 @@ class CentroRamanMedium(Vacuum):
 
     @cached_property
     def raman_factor(self):
-        pre_raman = np.tile( np.transpose((1 - self.alpha) * self.chi_matrix[1]), (len(self.position), 1))
-        #print(np.shape(pre_raman))
+        pre_raman = np.tile(np.transpose((1 - self.alpha) * self.chi_matrix[1]), (len(self.position), 1))
         return pre_raman
 
     @property
@@ -234,13 +238,22 @@ class CentroRamanMedium(Vacuum):
 
     @property
     def P_Tilde(self):
-        first_order_term = np.matmul(np.transpose(self.chi_matrix[0]), np.transpose(self.E_matrix[:][0]))
-        third_order_term = np.matmul(np.transpose(self.alpha * self.chi_matrix[1]), np.transpose(self.E_matrix[:][2]))
-        E_1_matrix = np.transpose(np.tile(np.transpose(self.E_matrix)[0], (len(self.chi_1), 1)))
+        if self.first_order_term is None:
+            self._allocate_first_order_term()
+            self._allocate_third_order_term()
+
+        E_1_vector = np.transpose(self.E_matrix)[0]
+        E_1_matrix = np.transpose(np.tile(E_1_vector, (len(self.chi_1), 1)))
+        E_3_vector = np.transpose(self.E_matrix)[2]
+
+        self.first_order_term = np.outer(np.transpose(self.chi_matrix[0]), E_1_vector)
+        self.third_order_term = np.outer(np.transpose(self.alpha * self.chi_matrix[1]), E_3_vector)
+
 
         raman_term = self.raman_factor * self.Q_k * E_1_matrix
 
-        return eps0 * (np.transpose(first_order_term) + np.transpose(third_order_term) + raman_term)
+
+        return eps0 * (np.transpose(self.first_order_term) + np.transpose(self.third_order_term) + raman_term)
 
     def _allocate_J_p_k(self):
         self.J_p_k = np.zeros(shape=(len(self.position), len(self.chi_1)))
@@ -253,6 +266,12 @@ class CentroRamanMedium(Vacuum):
 
     def _allocate_Q_k(self):
         self.Q_k = np.zeros(shape=(len(self.position), len(self.chi_1)))
+
+    def _allocate_first_order_term(self):
+        self.first_order_term = np.zeros(shape=(len(self.chi_1), len(self.position)))
+
+    def _allocate_third_order_term(self):
+        self.third_order_term = np.zeros(shape=(len(self.chi_1), len(self.position)))
 
 
     def step_P(self):

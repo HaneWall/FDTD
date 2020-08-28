@@ -192,7 +192,7 @@ class Load_QPM_length(Case):
             x, y = np.shape(self.windowed_data)
             padded_length = y + self.zero_padding
             timesteps = padded_length
-            #hanning = get_window('blackman', timesteps)
+            #hanning = np.kaiser(timesteps, 6)
             self.omega = 2 * np.pi * np.linspace(0, 1 / (2 * self.dt), timesteps // 2)
             self.fft_matrix = np.fft.fft(self.windowed_data[0:self.no_observer][:], n=padded_length)
             self.abs_fft = np.zeros(shape=(self.no_observer, timesteps//2))
@@ -243,17 +243,26 @@ class Load_QPM_length(Case):
         intensity = 5*10e12
         E_0 = np.sqrt(2*np.sqrt(mu0/eps0)*intensity)
         index_of_second = np.argmin(np.abs(self.omega-number_of_harmonic*self.first_har))
+        index_of_main = np.argmin(np.abs(self.omega-self.first_har))
+        first_amplitude = self.abs_fft[0][index_of_main]
         shg_amplitude = np.zeros(self.no_observer)
         for obs in range(self.no_observer):
             shg_amplitude[obs] = self.abs_fft[obs][index_of_second]
 
         fig, axes = plt.subplots()
-        axes.plot(self.relative_observer_pos * self.dx, shg_amplitude/E_0, linewidth=2)
-        axes.set_xlim([0, 2.55e-05])
-        axes.grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
         for i in range(int(self.no_lambdas)*2 + 1):
-            axes.axvline(x=i*737*self.dx, color=RED, linestyle='dashed', alpha=0.2)
+            axes.axvline(x=i*737*self.dx, color='black', linestyle='dashed', alpha=1)
+        axes.grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
+        axes.plot(self.relative_observer_pos * self.dx, shg_amplitude/first_amplitude, linewidth=1.5, color=TEAL)
+        axes.set_xlim([0, 2.55e-05])
         plt.ticklabel_format(style='sci', axis='x', scilimits=(0, 0))
+        plt.show()
+
+    def visualize_windowed_data(self):
+        fig, axes = plt.subplots()
+        x, y = np.shape(self.windowed_data)
+        for obs in range(600):
+            axes.plot(np.arange(y), self.windowed_data[obs][:])
         plt.show()
 
     def show_trace(self):
@@ -348,10 +357,11 @@ qpm_test_end_P.show_spectrum()
 '''
 
 
-qpm_test = Load_QPM_length('2000obs_10fs_16000pt_05courant_6lambda')
-qpm_test.zero_pad(50000)
-qpm_test.set_fft_limits(past_from_max=45000, future_from_max=45000)
+qpm_test = Load_QPM_length('1000obs_10fs_32000pt_05courant_6lambda')
+qpm_test.zero_pad(3000)
+qpm_test.set_fft_limits(past_from_max=8000, future_from_max=8000)
 qpm_test.fft()
+qpm_test.visualize_windowed_data()
 #qpm_test.visualize_over_frequencies()
 qpm_test.visualize_n_over_length(number_of_harmonic=2)
 
