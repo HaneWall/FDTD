@@ -1,7 +1,7 @@
 from .grid import Grid
 from werkzeug.utils import cached_property
 import numpy as np
-from .constants import eps0
+from .constants import eps0, c0
 
 
 
@@ -78,7 +78,6 @@ class NonDispersiveMedia(Vacuum):
     def epsilon_complex(self, omega):
         return self.eps
 
-
 class LorentzMedium(Vacuum):
     ''' electron cloud behaves like one or multiple harmonic oscillator '''
     # Todo: implement chi in such a way, that you can decribe chi_n -> variable E_vec length (inf order)
@@ -124,7 +123,7 @@ class LorentzMedium(Vacuum):
         chi_m = np.array([self.chi_1, self.chi_2, self.chi_3])
         return chi_m
 
-
+    @property
     def P_Tilde(self):
         E_matrix = np.zeros(shape=(len(self.position), 3))
         for ind, pos in zip(range(len(self.position)), self.position):
@@ -146,6 +145,17 @@ class LorentzMedium(Vacuum):
             eps_complex += chi_1_k * (w_k**2) / (w_k**2 - omega**2 - 1j * gamma_k * omega)
         return eps_complex
 
+    def n_real(self, omega):
+        return np.sqrt((np.abs(self.epsilon_complex(omega)) + self.epsilon_real(omega)) / 2)
+
+    def n_kappa(self, omega):
+        return np.sqrt((np.abs(self.epsilon_complex(omega)) - self.epsilon_real(omega)) / 2)
+
+    def group_velocity(self, omega):
+        n_1 = self.n_real(omega + 0.000001*omega)
+        n_2 = self.n_real(omega - 0.000001*omega)
+        diff_n = (n_1 - n_2)/(0.000002*omega)
+        return (c0)/(self.n_real(omega) + omega*diff_n)
 
     def step_P(self):
         if self.J_p_k is None:
@@ -162,10 +172,9 @@ class LorentzMedium(Vacuum):
 
 
         self.J_p_k[0:len(self.position)] = self.b * self.J_p_k[0:len(self.position)] + \
-                                           self.a * (self.P_Tilde()[0:len(self.position)] - self.P_k[0:len(self.position)])
+                                           self.a * (self.P_Tilde[0:len(self.position)] - self.P_k[0:len(self.position)])
 
         self.grid.J_p[self.position[0]:(self.position[-1] + 1)] = np.sum(self.J_p_k, axis=1)
-
 
 class CentroRamanMedium(Vacuum):
 
@@ -273,6 +282,32 @@ class CentroRamanMedium(Vacuum):
     def _allocate_third_order_term(self):
         self.third_order_term = np.zeros(shape=(len(self.chi_1), len(self.position)))
 
+    def epsilon_real(self, omega):
+        eps_real = np.real(self.epsilon_complex(omega))
+        return eps_real
+
+    def epsilon_imag(self, omega):
+        eps_imag = np.imag(self.epsilon_complex(omega))
+        return eps_imag
+
+    def epsilon_complex(self, omega):
+        eps_complex = self.eps
+        for w_k, gamma_k, chi_1_k in zip(self.w_0, self.gamma_K, self.chi_1):
+            eps_complex += chi_1_k * (w_k ** 2) / (w_k ** 2 - omega ** 2 - 1j * gamma_k * omega)
+        return eps_complex
+
+    def n_real(self, omega):
+        return np.sqrt((np.abs(self.epsilon_complex(omega)) + self.epsilon_real(omega)) / 2)
+
+    def n_kappa(self, omega):
+        return np.sqrt((np.abs(self.epsilon_complex(omega)) - self.epsilon_real(omega)) / 2)
+
+    def group_velocity(self, omega):
+        n_1 = self.n_real(omega + 0.00001 * omega)
+        n_2 = self.n_real(omega - 0.00001 * omega)
+        diff_n = (n_1 - n_2) / (0.00002 * omega)
+        return (c0) / (self.n_real(omega) + omega * diff_n)
+
 
     def step_P(self):
         if self.J_p_k is None:
@@ -303,7 +338,7 @@ class CentroRamanMedium(Vacuum):
             self._allocate_G_k()
             self._allocate_Q_k()
 
-        self.G_k[0:len(self.position)] = self.d *self.G_k[0:len(self.position)] + self.c * \
+        self.G_k[0:len(self.position)] = self.d * self.G_k[0:len(self.position)] + self.c * \
                                          (np.transpose(np.tile(np.transpose(self.E_matrix)[1], (len(self.chi_1), 1))) - self.Q_k[0:len(self.position)])
 
     def step_Q(self):

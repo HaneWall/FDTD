@@ -623,4 +623,10 @@ class Harmonic_Slab_Setup:
         self._grids_w_slab()
         self._visualize()
 
+'''
+class Soliton(benchmark):
+     tries to show the magnificent combined effect of SPM and GVD'''
+    
+
+    
 

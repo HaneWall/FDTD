@@ -4,6 +4,7 @@ import os
 import time
 import numpy as np
 from fdtd_1d.constants import c0, eps0, mu0, BLUE, CYAN, TEAL, ORANGE, RED, MAGENTA, GREY
+from fdtd_1d.analytical_solutions import Qpm_Length_Analytical
 from matplotlib.colors import LogNorm
 from matplotlib import ticker
 from scipy.signal import get_window, hilbert
@@ -150,12 +151,14 @@ class Load_QPM_length(Case):
         print("loaded in --- %s seconds ---" % (time.time() - start_time))
 
     def zero_pad(self, number_of_zeros):
-        self.padded_observed_data = np.pad(self.observed_data[0:self.no_observer][:], [(0, 0), (number_of_zeros, number_of_zeros)], constant_values=0)
+        self.padded_observed_data = np.pad(self.observed_data[0:self.no_observer][:], [(0, 0), (0, number_of_zeros)], constant_values=0)
+        #print(np.shape(self.padded_observed_data))
 
     def set_fft_limits(self, past_from_max, future_from_max):
         self.windowed_data = np.zeros(shape=(self.no_observer, (past_from_max + future_from_max + 1)))
 
         if self.padded_observed_data is not None:
+            #print(np.shape(self.padded_observed_data))
             x, y = np.shape(self.padded_observed_data)
             self.analytical_signal = np.empty(shape=(self.no_observer, y), dtype='complex_')
             self.envelope_amplitude = np.zeros(shape=(self.no_observer, y))
@@ -175,6 +178,7 @@ class Load_QPM_length(Case):
         self.max_timestep = np.zeros(self.no_observer)
         self.max_timestep = np.argmax(self.envelope_amplitude[0:self.no_observer][:], axis=1)
         begin = np.array(self.max_timestep - past_from_max)
+        #print(begin)
         end = np.array(self.max_timestep + future_from_max + 1)
 
         if self.padded_observed_data is not None:
@@ -189,15 +193,16 @@ class Load_QPM_length(Case):
     def fft(self):
 
         if self.windowed_data is not None:
+            #print(np.shape(self.padded_observed_data))
             x, y = np.shape(self.windowed_data)
             padded_length = y + self.zero_padding
             timesteps = padded_length
-            #hanning = np.kaiser(timesteps, 6)
+            #window = np.hamming(y)
             self.omega = 2 * np.pi * np.linspace(0, 1 / (2 * self.dt), timesteps // 2)
             self.fft_matrix = np.fft.fft(self.windowed_data[0:self.no_observer][:], n=padded_length)
             self.abs_fft = np.zeros(shape=(self.no_observer, timesteps//2))
             for obs in range(self.no_observer):
-                self.abs_fft[obs][:] = 2/timesteps * np.abs(self.fft_matrix[obs][0:timesteps//2])
+                self.abs_fft[obs][:] = 2 / timesteps * np.abs(self.fft_matrix[obs][0:timesteps//2])
             self.abs_fft_sqrd = self.abs_fft[:][:] ** 2
             abs_fft_sqrd_max = np.max(self.abs_fft_sqrd[:][:])
             self.normalized_abs_fft_sqrd = self.abs_fft_sqrd / abs_fft_sqrd_max
@@ -245,15 +250,24 @@ class Load_QPM_length(Case):
         index_of_second = np.argmin(np.abs(self.omega-number_of_harmonic*self.first_har))
         index_of_main = np.argmin(np.abs(self.omega-self.first_har))
         first_amplitude = self.abs_fft[0][index_of_main]
+
         shg_amplitude = np.zeros(self.no_observer)
         for obs in range(self.no_observer):
             shg_amplitude[obs] = self.abs_fft[obs][index_of_second]
+
+        analytical = Qpm_Length_Analytical(initial_values=[first_amplitude, 0])
+        A_1, A_2, z = analytical.integrate(end_z=2.55e-5, dz=0.0001e-6)
+
+        analytical_mono = Qpm_Length_Analytical(initial_values=[first_amplitude, 0], mode='mono')
+        A_1_mono, A_2_mono, z_mono = analytical_mono.integrate(end_z=2.55e-5, dz=0.0001e-6)
 
         fig, axes = plt.subplots()
         for i in range(int(self.no_lambdas)*2 + 1):
             axes.axvline(x=i*737*self.dx, color='black', linestyle='dashed', alpha=1)
         axes.grid(True, linestyle=(0, (1, 5)), color=GREY, linewidth=1)
         axes.plot(self.relative_observer_pos * self.dx, shg_amplitude/first_amplitude, linewidth=1.5, color=TEAL)
+        axes.plot(z, np.abs(A_2)/1025, color=RED, linestyle='dashed')
+        axes.plot(z, np.abs(A_2_mono)/1025, color=RED, linestyle='dashed')
         axes.set_xlim([0, 2.55e-05])
         plt.ticklabel_format(style='sci', axis='x', scilimits=(0, 0))
         plt.show()
@@ -357,11 +371,11 @@ qpm_test_end_P.show_spectrum()
 '''
 
 
-qpm_test = Load_QPM_length('1000obs_10fs_32000pt_05courant_6lambda')
-qpm_test.zero_pad(3000)
-qpm_test.set_fft_limits(past_from_max=8000, future_from_max=8000)
+qpm_test = Load_QPM_length('1000obs_10fs_32000pt_05courant_6lambda_right_ampl')
+qpm_test.zero_pad(30000)
+qpm_test.set_fft_limits(past_from_max=20000, future_from_max=20000)
 qpm_test.fft()
-qpm_test.visualize_windowed_data()
+#qpm_test.visualize_windowed_data()
 #qpm_test.visualize_over_frequencies()
 qpm_test.visualize_n_over_length(number_of_harmonic=2)
 

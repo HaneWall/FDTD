@@ -1,8 +1,16 @@
-from fdtd_1d.utilities import get_amplitude_and_phase
+from fdtd_1d.utilities import get_amplitude_and_phase, numerical_group_velocity
+from fdtd_1d.constants import c0
 import numpy as np
 import csv
 import os
 from werkzeug.utils import cached_property
+
+def _create_array_from_slice(slice):
+    arr = []
+    for cell in range(slice.start, slice.stop):
+        arr.append(cell)
+    return arr
+
 
 class ParentObserver:
 
@@ -17,7 +25,10 @@ class ParentObserver:
             self.grid.local_observers.append(self)
             self.position = index
         elif isinstance(index, slice):
-            raise KeyError('Not supporting slicing for observer!')
+            self.grid = grid
+            self.grid.local_observers.append(self)
+            arr = _create_array_from_slice(index)
+            self.position = arr
 
     def save_Ez(self):
         pass
@@ -92,8 +103,6 @@ class E_FFTObserver(ParentObserver):
         if self.grid.timesteps_passed in range(self.first_timestep, self.second_timestep + 1):
             self.observed_E[self.grid.timesteps_passed-self.first_timestep] = (self.grid.Ez[self.position])
 
-
-
 class P_FFTObserver(ParentObserver):
     '''
     stores an array of P at specific position from timestep1 to timestep2
@@ -121,4 +130,47 @@ class P_FFTObserver(ParentObserver):
         if self.grid.timesteps_passed in range(self.first_timestep, self.second_timestep + 1):
             self.observed_P[self.grid.timesteps_passed-self.first_timestep] = self.grid.P[self.position]
 
+class MovingFrame(ParentObserver):
+
+    def __init__(self, x_to_snapshot, central_wavelength):
+        super().__init__()
+        self.x_store = x_to_snapshot
+        self.central_wavelength = central_wavelength
+        self.central_omega = 2*np.pi*c0/central_wavelength
+        self.i = 0
+        self.stored_data = None
+
+    @cached_property
+    def t_start(self):
+        delay_distance_in_dx = self.position[0] + int((self.position[-1] - self.position[0])/2) - self.grid.sources[0].position
+        peak_timestep = self.grid.sources[0].peak_timestep
+        return (peak_timestep + int((delay_distance_in_dx * c0) / (self.corrected_group_velocity * self.grid.courant)))
+
+    @cached_property
+    def corrected_group_velocity(self):
+        return numerical_group_velocity(central_wavelength=self.central_wavelength,
+                                        group_velocity=self.grid.materials[0].group_velocity(omega=self.central_omega),
+                                        dx=self.grid.dx, courant=self.grid.courant,
+                                        n_real=self.grid.materials[0].n_real(self.central_omega))
+
+
+    def _allocate_memory(self):
+        self.stored_data = np.empty(shape=(len(self.x_store), len(self.position)))
+        self.position_frame = np.array(self.position)
+        self.timesteps_to_store = np.array([self.t_start + int((x * c0)/(self.corrected_group_velocity * self.grid.dx * self.grid.courant)) for x in self.x_store])
+
+    def _new_position(self):
+        movement = int((self.grid.timesteps_passed - self.t_start) * self.corrected_group_velocity * self.grid.courant / c0)
+        self.position_frame = np.array(self.position) + movement
+
+    def save_Ez(self):
+        if self.stored_data is None:
+            self._allocate_memory()
+
+        if self.grid.timesteps_passed in self.timesteps_to_store:
+            self._new_position()
+            self.stored_data[self.i][:] = self.grid.Ez[self.position_frame[0]:(self.position_frame[-1] + 1)]
+            self.i += 1
+        else:
+            pass
 

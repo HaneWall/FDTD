@@ -98,23 +98,19 @@ class SechEnveloped(ParentSource):
     def omega(self):
         return 2 * np.pi * c0 / self.lamb
 
-    @property
-    def sech_sqrd(self):
-        return (2/(np.exp((self.peak_timestep-self.grid.timesteps_passed)*self.grid.dt/(self.pulse_duration)) + np.exp(-(self.peak_timestep-self.grid.timesteps_passed)*self.grid.dt/(self.pulse_duration))))**2
-
     @cached_property
     def ampl(self):
         return np.sqrt(2*np.sqrt(mu0 / eps0) * self.intensity)
 
 
     def step_Ez(self):
-        self.grid.Ez[self.position] += self.ampl * self.sech_sqrd * np.sin(self.omega*self.grid.timesteps_passed + self.phase)
+        self.grid.Ez[self.position] += self.ampl * (2 * np.cos(self.omega*self.grid.time_passed + self.phase)) / (np.exp(-2*np.log(2)*((self.peak_timestep - self.grid.timesteps_passed)*self.grid.dt)/self.pulse_duration) + np.exp(2*np.log(2)*((self.peak_timestep - self.grid.timesteps_passed)*self.grid.dt)/self.pulse_duration))
 
     def step_Hy(self):
         if not self.tfsf:
             pass
         else:
-            self.grid.Hy[self.position - 1] += -np.sqrt(eps0/mu0) * self.ampl * np.sin(self.omega*self.grid.timesteps_passed  + self.phase)
+            self.grid.Hy[self.position - 1] += -self.ampl * (2 * np.cos(self.omega*self.grid.time_passed + self.phase)) / (np.exp(-2*np.log(2)*((self.peak_timestep - self.grid.timesteps_passed)*self.grid.dt)/self.pulse_duration) + np.exp(2*np.log(2)*((self.peak_timestep - self.grid.timesteps_passed)*self.grid.dt)/self.pulse_duration))
 
 class GaussianImpulseWithFrequency(ParentSource):
     def __init__(self, name, Intensity, peak_timestep, pulse_duration, wavelength, tfsf=False, phase=0):
