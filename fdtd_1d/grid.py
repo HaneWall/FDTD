@@ -6,6 +6,7 @@ from .constants import c0, eps0, mu0
 from .visuals import visualize, AnimateTillTimestep, visualize_permittivity, visualize_fft
 from .observer import QuasiHarmonicObserver, E_FFTObserver, P_FFTObserver
 from werkzeug.utils import cached_property
+from multiprocessing.dummy import Pool as ThreadPool
 
 
 class Grid:
@@ -110,24 +111,18 @@ class Grid:
     def update(self):
         # note that steps are dependent on object
         # updating polarisation P
+
+        # saving local points in order to extract phase and amplitude data
+        for observer in self.local_observers:
+            observer.save_Ez()
+            observer.save_P()
+
         for mat in self.materials:
+            mat.step_P_tilde()
+            mat.step_J_p()
             mat.step_P()
+            mat.step_G()
             mat.step_Q()
-
-        # saving Ez - boundaries
-        for bound in self.boundaries:
-            bound.save_Ez()
-
-        # updating E - field, index [1,last cell]
-        self.step_Ez()
-
-        # updating E - Sources
-        for source in self.sources:
-            source.step_Ez()
-
-        # updating E - boundaries
-        for bound in self.boundaries:
-            bound.step_Ez()
 
         # saving Hy - boundaries
         for bound in self.boundaries:
@@ -144,15 +139,29 @@ class Grid:
         for bound in self.boundaries:
             bound.step_Hy()
 
+        # saving Ez - boundaries
+        for bound in self.boundaries:
+            bound.save_Ez()
+
+        # updating E - field, index [1,last cell]
+        self.step_Ez()
+
+        # updating E - Sources
+        for source in self.sources:
+            source.step_Ez()
+
+        # updating E - boundaries
+        for bound in self.boundaries:
+            bound.step_Ez()
+
+
+
+        '''
         # updating polarisation current J_p
         for mat in self.materials:
             mat.step_J_p()
-            mat.step_G()
+            mat.step_G()'''
 
-        # saving local points in order to extract phase and amplitude data
-        for observer in self.local_observers:
-            observer.save_Ez()
-            observer.save_P()
 
 
 

@@ -129,6 +129,47 @@ class Load_QPM_end_P(Case):
 
         plt.show()
 
+
+class Load_Soliton(Case):
+
+    def __init__(self, dir_name):
+        super().__init__()
+        self.path += '/soliton/' + dir_name
+        self._load_data()
+        self._do_hilbert_transforms()
+
+    def _load_data(self):
+        start_time = time.time()
+        self.observed_data = np.load(self.path + '/Int_Pos_E.npy')
+        self.dx = 25e-09
+        self.peak_timestep, self.pulse_duration = np.load(self.path + '/info.npy')
+        self.intensities = np.load(self.path + '/intensities.npy')
+        self.propagation_distance = np.load(self.path + '/propagations.npy')
+        print("loaded in --- %s seconds ---" % (time.time() - start_time))
+
+    def _do_hilbert_transforms(self):
+        self.sqrd_observed_data = np.empty_like(self.observed_data)
+        self.hilbert_transforms = np.empty_like(self.observed_data)
+        for int_ind in range(self.intensities.size):
+            for x_ind in range(self.propagation_distance.size):
+                self.sqrd_observed_data[int_ind][x_ind][:] = self.observed_data[int_ind][x_ind][:] ** 2
+                self.hilbert_transforms[int_ind][x_ind][:] = np.abs(hilbert(self.observed_data[int_ind][x_ind][:]))**2
+
+    def plot_hilbert_transforms(self):
+        x, y, z = np.shape(self.observed_data)
+        fig, axes = plt.subplots(nrows=1, ncols=x)
+
+        if x==1:
+            for ind in range(y):
+                axes.plot(self.hilbert_transforms[0][y][:], color=color_spec[y])
+            plt.show()
+
+        else:
+            for ind_x in range(x):
+                for ind_y in range(y):
+                    axes[ind_x].plot(self.hilbert_transforms[ind_x][ind_y][:], color=color_spec[ind_y])
+            plt.show()
+
 class Load_QPM_length(Case):
 
     def __init__(self, dir_name, zero_padding=0):
@@ -291,6 +332,7 @@ class Load_QPM_length(Case):
         plt.colorbar(im, orientation='horizontal')
         plt.show()
 
+
 class Load_Lorentz_Slab(Case):
 
 
@@ -356,6 +398,10 @@ class Load_Lorentz_Slab(Case):
         plt.show()
 
 
+
+soliton_test = Load_Soliton('trying_to_read')
+soliton_test.plot_hilbert_transforms()
+
 '''
 lorentz_test = Load_Lorentz_Slab('new_data_files_per_terminal')
 lorentz_test.visualize()
@@ -370,15 +416,15 @@ qpm_test_end_P.fft()
 qpm_test_end_P.show_spectrum()
 '''
 
-
-qpm_test = Load_QPM_length('1000obs_10fs_32000pt_05courant_6lambda_right_ampl')
+'''
+qpm_test = Load_QPM_length('faster_media')
 qpm_test.zero_pad(30000)
 qpm_test.set_fft_limits(past_from_max=20000, future_from_max=20000)
 qpm_test.fft()
 #qpm_test.visualize_windowed_data()
 #qpm_test.visualize_over_frequencies()
 qpm_test.visualize_n_over_length(number_of_harmonic=2)
-
+'''
 
 
 

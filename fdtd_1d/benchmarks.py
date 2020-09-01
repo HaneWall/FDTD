@@ -1,11 +1,15 @@
 import numpy as np
-import csv
 import os
 import time
 import fdtd_1d as f
 import matplotlib.pyplot as plt
 from .constants import c0, BLUE, CYAN, TEAL, ORANGE, RED, MAGENTA, GREY
 from werkzeug.utils import cached_property
+from multiprocessing import Pool
+
+
+
+
 
 color_spec = [BLUE, CYAN, TEAL, ORANGE, RED, MAGENTA, GREY]
 
@@ -414,6 +418,73 @@ class QPM_end_P(benchmark):
         self._create_grid()
         print("computed in --- %s seconds ---" % (time.time() - start_time))
 
+
+class Soliton(benchmark):
+
+    ''' tries to show the majestic combined effect of GVD and SPM '''
+
+    def __init__(self, name, central_wavelength, pulse_duration, intensities, x_to_snapshot, peak_timestep, frame_width_in_dx):
+        super().__init__(name=name, benchmark_type='soliton')
+        self.central_wavelength = central_wavelength
+        self.pulse_duration = pulse_duration
+        self.intensities = np.array(intensities)
+        self.x_to_snapshot = x_to_snapshot
+        self.peak_timestep = peak_timestep
+        self.name = name
+        self.frame_width = frame_width_in_dx
+
+
+    def _allocate_memory(self):
+        self.grid_information = np.array([self.peak_timestep, self.pulse_duration])
+        self.used_propagations = np.array(self.x_to_snapshot)
+        self.used_intensities = np.array(self.intensities)
+
+    def _create_grids(self, intensity):
+        soliton_grid = f.Grid(270000, dx=25e-09, courant=0.5)
+
+        # Step 1: init media
+        soliton_grid[5:269990] = f.CentroRamanMedium(name='Varin', chi_1=[0.69617, 0.40794, 0.89748], w0=[2.7537e16, 1.6205e16, 1.9034e14], chi_3=[1.94e-22, 0, 0], alpha=[0.7, 0, 0], wr=[8.7722e13, 0, 0], gamma_K=[0, 0, 0], gamma_R=[3.1250e13, 0, 0], permeability=1, conductivity=0, eps_inf=1)
+
+        # Step 2: init src
+        soliton_grid[3] = f.SechEnveloped(name='Varin', wavelength=1.5e-06, pulse_duration=self.pulse_duration, Intensity=intensity, peak_timestep=self.peak_timestep, tfsf=False)
+
+        # Step 3: init frame
+        soliton_grid[5:(6+self.frame_width)] = f.MovingFrame(x_to_snapshot=self.x_to_snapshot, central_wavelength=self.central_wavelength)
+
+        # Step 4: init boundaries
+        soliton_grid[0] = f.LeftSideGridBoundary()
+        soliton_grid[269999] = f.RightSideGridBoundary()
+
+        # Step 5: start benchmark
+        soliton_grid.run_timesteps(700000, vis=False)
+
+        # due to multiprocessing it is more convenient to store data by process (nobody loves waiting)
+        observed_process_data = soliton_grid.local_observers[0].stored_data
+        return observed_process_data
+
+    def store_obs_data(self):
+        start_time = time.time()
+        self._allocate_memory()
+        self.allocate_directory()
+
+        file_grid_info = os.path.join(self.dir_path, 'info.npy')
+        file_observed_data = os.path.join(self.dir_path, 'Int_Pos_E.npy')
+        file_used_propagations = os.path.join(self.dir_path, 'propagations.npy')
+        file_used_intensities = os.path.join(self.dir_path, 'intensities.npy')
+
+        np.save(file_grid_info, arr=self.grid_information)
+        np.save(file_used_intensities, arr=self.used_intensities)
+        np.save(file_observed_data, arr=self.observed_data)
+        np.save(file_used_propagations, arr=self.used_propagations)
+        print("stored in --- %s seconds ---" % (time.time() - start_time))
+
+    def run_benchmark(self):
+        start_time = time.time()
+        processpool = Pool()
+        self.observed_data = np.array(processpool.map(self._create_grids, self.intensities))
+        print("computed in --- %s seconds ---" % (time.time() - start_time))
+
+
 class TiO2_Si02_Dielectric_Mirror_Setup:
 
     def __init__(self, N_lambda_media, wavelength_guided_for, wavelength, ampl, timesteps, number_of_layer_pairs, vary_layers=False, vary_inc_wavelength=False):
@@ -623,9 +694,7 @@ class Harmonic_Slab_Setup:
         self._grids_w_slab()
         self._visualize()
 
-'''
-class Soliton(benchmark):
-     tries to show the magnificent combined effect of SPM and GVD'''
+
     
 
     

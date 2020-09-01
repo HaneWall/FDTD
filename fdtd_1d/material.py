@@ -57,6 +57,10 @@ class Vacuum:
     def step_G(self):
         pass
 
+    def step_P_tilde(self):
+        pass
+
+
 # defining subclasses - convenient materials for investigations
 
 
@@ -96,7 +100,16 @@ class LorentzMedium(Vacuum):
         self.chi_3 = chi_3
         self.J_p_k = None
         self.P_k = None
+        self.P_tilde = None
         self.start_of_media = None
+
+    def _allocate_P_tilde(self):
+        self.P_tilde = np.zeros(shape=(len(self.position), len(self.chi_1)))
+
+    def _allocate_E_arrays(self):
+        self.E_1 = np.zeros(len(self.position))
+        self.E_2 = np.zeros(len(self.position))
+        self.E_3 = np.zeros(len(self.position))
 
     def _allocate_J_p_k(self):
         self.J_p_k = np.zeros(shape=(len(self.position), len(self.chi_1)))
@@ -123,13 +136,13 @@ class LorentzMedium(Vacuum):
         chi_m = np.array([self.chi_1, self.chi_2, self.chi_3])
         return chi_m
 
-    @property
+    '''@property
     def P_Tilde(self):
         E_matrix = np.zeros(shape=(len(self.position), 3))
         for ind, pos in zip(range(len(self.position)), self.position):
             E_matrix[ind] = [self.grid.Ez[pos] ** i for i in range(1, 4)]
 
-        return eps0 * np.matmul(E_matrix, self.chi_matrix)
+        return eps0 * np.matmul(E_matrix, self.chi_matrix)'''
 
     def epsilon_real(self, omega):
         eps_real = np.real(self.epsilon_complex(omega))
@@ -157,22 +170,27 @@ class LorentzMedium(Vacuum):
         diff_n = (n_1 - n_2)/(0.000002*omega)
         return (c0)/(self.n_real(omega) + omega*diff_n)
 
-    def step_P(self):
+    def step_P_tilde(self):
         if self.J_p_k is None:
+            self._allocate_E_arrays()
+            self._allocate_P_tilde()
             self._allocate_J_p_k()
             self._allocate_P_k()
 
+        self.E_1[:] = self.grid.Ez[self.position[0]:(self.position[-1] + 1)]
+        self.E_2[:] = self.E_1[:] ** 2
+        self.E_3[:] = self.E_1[:] ** 3
+        self.E_matrix = np.transpose(np.array([self.E_1, self.E_2, self.E_3]))
+        self.P_tilde = eps0 * np.matmul(self.E_matrix, self.chi_matrix)
+
+    def step_P(self):
         self.P_k[0:len(self.position)] = self.P_k[0:len(self.position)] + self.grid.dt * self.J_p_k[0:len(self.position)]
         self.grid.P[self.position[0]:(self.position[-1] + 1)] = np.sum(self.P_k, axis=1)
 
+
     def step_J_p(self):
-        if self.J_p_k is None:
-            self._allocate_J_p_k()
-            self._allocate_P_k()
-
-
         self.J_p_k[0:len(self.position)] = self.b * self.J_p_k[0:len(self.position)] + \
-                                           self.a * (self.P_Tilde[0:len(self.position)] - self.P_k[0:len(self.position)])
+                                           self.a * (self.P_tilde[0:len(self.position)] - self.P_k[0:len(self.position)])
 
         self.grid.J_p[self.position[0]:(self.position[-1] + 1)] = np.sum(self.J_p_k, axis=1)
 
@@ -196,10 +214,9 @@ class CentroRamanMedium(Vacuum):
         self.P_k = None
         self.G_k = None
         self.Q_k = None
-
-
-        self.first_order_term = None
-        self.third_order_term = None
+        self.E_1 = None
+        self.E_2 = None
+        self.E_3 = None
 
         self.alpha = np.array(alpha)
         self.start_of_media = None
@@ -233,42 +250,14 @@ class CentroRamanMedium(Vacuum):
         chi_m = np.array([self.chi_1, self.chi_3])
         return chi_m
 
-    @cached_property
-    def raman_factor(self):
-        pre_raman = np.tile(np.transpose((1 - self.alpha) * self.chi_matrix[1]), (len(self.position), 1))
-        return pre_raman
-
-    @property
-    def E_matrix(self):
-        E_matrix = np.zeros(shape=(len(self.position), 3))
-        for ind, pos in zip(range(len(self.position)), self.position):
-            E_matrix[ind] = [self.grid.Ez[pos] ** i for i in [1, 2, 3]]
-        return E_matrix
-
-    @property
-    def P_Tilde(self):
-        if self.first_order_term is None:
-            self._allocate_first_order_term()
-            self._allocate_third_order_term()
-
-        E_1_vector = np.transpose(self.E_matrix)[0]
-        E_1_matrix = np.transpose(np.tile(E_1_vector, (len(self.chi_1), 1)))
-        E_3_vector = np.transpose(self.E_matrix)[2]
-
-        self.first_order_term = np.outer(np.transpose(self.chi_matrix[0]), E_1_vector)
-        self.third_order_term = np.outer(np.transpose(self.alpha * self.chi_matrix[1]), E_3_vector)
-
-
-        raman_term = self.raman_factor * self.Q_k * E_1_matrix
-
-
-        return eps0 * (np.transpose(self.first_order_term) + np.transpose(self.third_order_term) + raman_term)
-
     def _allocate_J_p_k(self):
         self.J_p_k = np.zeros(shape=(len(self.position), len(self.chi_1)))
 
     def _allocate_P_k(self):
         self.P_k = np.zeros(shape=(len(self.position), len(self.chi_1)))
+
+    def _allocate_P_tilde(self):
+        self.P_Tilde = np.zeros(shape=(len(self.position), len(self.chi_1)))
 
     def _allocate_G_k(self):
         self.G_k = np.zeros(shape=(len(self.position), len(self.chi_1)))
@@ -276,11 +265,10 @@ class CentroRamanMedium(Vacuum):
     def _allocate_Q_k(self):
         self.Q_k = np.zeros(shape=(len(self.position), len(self.chi_1)))
 
-    def _allocate_first_order_term(self):
-        self.first_order_term = np.zeros(shape=(len(self.chi_1), len(self.position)))
-
-    def _allocate_third_order_term(self):
-        self.third_order_term = np.zeros(shape=(len(self.chi_1), len(self.position)))
+    def _allocate_E_arrays(self):
+        self.E_1 = np.zeros(len(self.position))
+        self.E_2 = np.zeros(len(self.position))
+        self.E_3 = np.zeros(len(self.position))
 
     def epsilon_real(self, omega):
         eps_real = np.real(self.epsilon_complex(omega))
@@ -303,51 +291,51 @@ class CentroRamanMedium(Vacuum):
         return np.sqrt((np.abs(self.epsilon_complex(omega)) - self.epsilon_real(omega)) / 2)
 
     def group_velocity(self, omega):
-        n_1 = self.n_real(omega + 0.00001 * omega)
-        n_2 = self.n_real(omega - 0.00001 * omega)
-        diff_n = (n_1 - n_2) / (0.00002 * omega)
+        n_1 = self.n_real(omega + 0.000001 * omega)
+        n_2 = self.n_real(omega - 0.000001 * omega)
+        diff_n = (n_1 - n_2) / (0.000002 * omega)
         return (c0) / (self.n_real(omega) + omega * diff_n)
 
 
-    def step_P(self):
+    def step_P_tilde(self):
         if self.J_p_k is None:
             self._allocate_P_k()
             self._allocate_J_p_k()
-            self._allocate_G_k()
             self._allocate_Q_k()
+            self._allocate_G_k()
+            self._allocate_E_arrays()
 
+        self.E_1[:] = self.grid.Ez[self.position[0]:(self.position[-1] + 1)]
+        self.E_2[:] = self.E_1[:] ** 2
+        self.E_3[:] = self.E_1[:] ** 3
+
+        # chi_1 * E_1 + chi_3 * (alpha * E_3 + (1 - alpha) * Q * E)
+        first_term = np.outer(np.array(self.chi_1), self.E_1)
+        second_term = np.outer((self.chi_matrix[1] * self.alpha), self.E_3)
+        third_term_1_alpha = np.broadcast_to((1 - self.alpha) * self.chi_matrix[1], shape=(len(self.position), len(self.chi_1)))
+        third_term_E = np.transpose(np.broadcast_to(self.E_1, shape=(len(self.chi_1), len(self.position))))
+        third_term = third_term_1_alpha * third_term_E * self.Q_k
+        self.P_Tilde = eps0 * (np.transpose(first_term) + np.transpose(second_term) + third_term)
+
+
+    def step_P(self):
         self.P_k[0:len(self.position)] = self.P_k[0:len(self.position)] + self.grid.dt * self.J_p_k[0:len(self.position)]
         self.grid.P[self.position[0]:(self.position[-1] + 1)] = np.sum(self.P_k, axis=1)
 
-    def step_J_p(self):
-        if self.J_p_k is None:
-            self._allocate_P_k()
-            self._allocate_J_p_k()
-            self._allocate_G_k()
-            self._allocate_Q_k()
 
+    def step_J_p(self):
         self.J_p_k[0:len(self.position)] = self.b * self.J_p_k[0:len(self.position)] + \
                                            self.a * (self.P_Tilde[0:len(self.position)] - self.P_k[0:len(self.position)])
 
         self.grid.J_p[self.position[0]:(self.position[-1] + 1)] = np.sum(self.J_p_k, axis=1)
 
-    def step_G(self):
-        if self.J_p_k is None:
-            self._allocate_P_k()
-            self._allocate_J_p_k()
-            self._allocate_G_k()
-            self._allocate_Q_k()
 
+    def step_G(self):
         self.G_k[0:len(self.position)] = self.d * self.G_k[0:len(self.position)] + self.c * \
-                                         (np.transpose(np.tile(np.transpose(self.E_matrix)[1], (len(self.chi_1), 1))) - self.Q_k[0:len(self.position)])
+                                         (np.transpose(np.broadcast_to(self.E_2, shape=(len(self.chi_1), len(self.position)))) - self.Q_k[0:len(self.position)])
+
 
     def step_Q(self):
-        if self.J_p_k is None:
-            self._allocate_P_k()
-            self._allocate_J_p_k()
-            self._allocate_G_k()
-            self._allocate_Q_k()
-
         self.Q_k[0:len(self.position)] = self.Q_k[0:len(self.position)] + self.grid.dt * self.G_k[0:len(self.position)]
 
 class CustomMedia(Vacuum):
