@@ -25,20 +25,24 @@ class LeftSideGridBoundary(Boundary):
 
     def __init__(self):
         super().__init__()
-        self.arr_Ez = [0]
-        self.arr_Hy = [0]
+        #self.arr_Ez = [0]
+        #self.arr_Hy = [0]
+        self.arr_Ez = np.zeros(2)
 
     def save_Ez(self):
-        self.arr_Ez.append(self.grid.Ez[self.position + 1])     # 1st : [0] -> [0, Ez[pos+1]]
+        self.arr_Ez[1] = (self.grid.Ez[self.position + 1])     # 1st : [0] -> [0, Ez[pos+1]]
 
     def save_Hy(self):
-        self.arr_Hy.append(self.grid.Hy[self.position + 1])
+        pass
+        #self.arr_Hy.append(self.grid.Hy[self.position + 1])
 
     def step_Ez(self):
-        self.grid.Ez[self.position] = self.arr_Ez.pop(0)        # 2nd : [0, Ez[pos+1]] -> [Ez[pos+1]]
+        self.grid.Ez[self.position] = self.arr_Ez[0]        # 2nd : [0, Ez[pos+1]] -> [Ez[pos+1]]
+        self.arr_Ez = self.arr_Ez[::-1]
 
     def step_Hy(self):
-        self.grid.Hy[self.position] = self.arr_Hy.pop(0)
+        pass
+        #self.grid.Hy[self.position] = self.arr_Hy.pop(0)
 
 
 class RightSideGridBoundary(Boundary):
@@ -48,20 +52,24 @@ class RightSideGridBoundary(Boundary):
 
     def __init__(self):
         super().__init__()
-        self.arr_Ez = [0]
-        self.arr_Hy = [0]
+        #self.arr_Ez = [0]
+        #self.arr_Hy = [0]
+        self.arr_Hy = np.zeros(2)
 
     def save_Ez(self):
-        self.arr_Ez.append(self.grid.Ez[self.position - 1])
+        pass
+        #self.arr_Ez.append(self.grid.Ez[self.position - 1])
 
     def save_Hy(self):
-        self.arr_Hy.append(self.grid.Hy[self.position - 1])
+        self.arr_Hy[1] = (self.grid.Hy[self.position - 1])
 
     def step_Ez(self):
-        self.grid.Ez[self.position] = self.arr_Ez.pop(0)
+        pass
+        #self.grid.Ez[self.position] = self.arr_Ez.pop(0)
 
     def step_Hy(self):
-        self.grid.Hy[self.position] = self.arr_Hy.pop(0)
+        self.grid.Hy[self.position] = self.arr_Hy[0]
+        self.arr_Hy = self.arr_Hy[::-1]
 
 class LeftSideMur(Boundary):
     '''
@@ -91,14 +99,11 @@ class LeftSideMur(Boundary):
         self.grid.Ez[self.position] = self.prev_Ez[1] + self.radiation_coeff * (self.grid.Ez[self.position + 1] - self.prev_Ez[0])
 
     def save_Hy(self):
-        pass
-        #self.prev_Hy[0] = self.grid.Hy[self.position]
-        #self.prev_Hy[1] = self.grid.Hy[self.position + 1]
+        self.prev_Hy[1] = self.grid.Hy[self.position + 1]
 
 
     def step_Hy(self):
-        pass
-        #self.grid.Hy[self.position] = self.prev_Hy[1] + self.radiation_coeff * (self.grid.Hy[self.position + 1] - self.prev_Hy[0])
+        self.grid.Hy[self.position] = self.prev_Hy[1] + self.radiation_coeff * (self.grid.Hy[self.position + 1] - self.prev_Hy[0])
 
 class RightSideMur(Boundary):
     '''

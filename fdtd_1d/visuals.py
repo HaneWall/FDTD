@@ -4,7 +4,7 @@ import matplotlib.animation as ani
 from matplotlib.patches import Rectangle
 import numpy as np
 
-from .observer import QuasiHarmonicObserver, E_FFTObserver, P_FFTObserver
+from .observer import QuasiHarmonicObserver, E_FFTObserver, P_FFTObserver, MovingFrame
 from .constants import mu0, eps0, c0
 
 
@@ -48,8 +48,9 @@ def visualize(Grid):
             obs_repr = Rectangle(xy=(obs.position - 0.5, -1.4), height=2.8, width=1, color='indigo', alpha=0.3)
         elif isinstance(obs, P_FFTObserver):
             obs_repr = Rectangle(xy=(obs.position - 0.5, -1.4), height=2.8, width=1, color='orange', alpha=0.3)
+        elif isinstance(obs, MovingFrame):
+            obs_repr = Rectangle(xy=(obs.position[0] - 0.5, -1.4), height=2.8, width=obs.position[-1] - obs.position[0], fc='none', color='red')
         axes[0].add_patch(obs_repr)
-
     fig.tight_layout()
     plt.show()
 

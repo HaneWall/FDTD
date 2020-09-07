@@ -45,7 +45,7 @@ class GaussianImpulse(ParentSource):
             pass
         else:
             self.grid.Hy[self.position - 1] += -np.sqrt(eps0/mu0) * self.ampl * np.exp(-0.5 * ((self.peak_timestep -
-                                                      self.grid.timesteps_passed) / self.sigma) ** 2)
+                                                      self.grid.timesteps_passed+1) / self.sigma) ** 2)
 
 
 
@@ -74,13 +74,13 @@ class SinusoidalImpulse(ParentSource):
     # as hard source - note that reflection information is forfeited in order to create perfect shape
     # for soft source change '=' to '+=' and vice versa
     def step_Ez(self):
-        self.grid.Ez[self.position] += self.ampl * np.sin(self.omega * self.grid.time_passed + self.phase)
+        self.grid.Ez[self.position] += self.ampl * np.sin(self.omega * (self.grid.timesteps_passed)*self.grid.dt + self.phase)
 
     def step_Hy(self):
         if not self.tfsf:
             pass
         else:
-            self.grid.Hy[self.position - 1] += -np.sqrt(eps0/mu0) * self.ampl * np.sin(self.omega * self.grid.time_passed + self.phase)
+            self.grid.Hy[self.position - 1] += -np.sqrt(eps0/mu0) * self.ampl * np.sin(self.omega * (self.grid.timesteps_passed - 1)*self.grid.dt + self.phase)
 
 
 class SechEnveloped(ParentSource):
@@ -102,15 +102,17 @@ class SechEnveloped(ParentSource):
     def ampl(self):
         return np.sqrt(2*np.sqrt(mu0 / eps0) * self.intensity)
 
+    def sech(self):
+        return 1/np.cosh((self.peak_timestep - self.grid.timesteps_passed)*self.grid.dt / (self.pulse_duration))
 
     def step_Ez(self):
-        self.grid.Ez[self.position] += self.ampl * (2 * np.cos(self.omega*self.grid.time_passed + self.phase)) / (np.exp(-2*np.log(2)*((self.peak_timestep - self.grid.timesteps_passed)*self.grid.dt)/self.pulse_duration) + np.exp(2*np.log(2)*((self.peak_timestep - self.grid.timesteps_passed)*self.grid.dt)/self.pulse_duration))
+        self.grid.Ez[self.position] += self.ampl * np.sin(self.omega*(self.peak_timestep - self.grid.timesteps_passed)*self.grid.dt + self.phase) * self.sech()
 
     def step_Hy(self):
         if not self.tfsf:
             pass
         else:
-            self.grid.Hy[self.position - 1] += -self.ampl * (2 * np.cos(self.omega*self.grid.time_passed + self.phase)) / (np.exp(-2*np.log(2)*((self.peak_timestep - self.grid.timesteps_passed)*self.grid.dt)/self.pulse_duration) + np.exp(2*np.log(2)*((self.peak_timestep - self.grid.timesteps_passed)*self.grid.dt)/self.pulse_duration))
+            self.grid.Hy[self.position - 1] += -self.ampl * np.sin(self.omega*(self.peak_timestep - self.grid.timesteps_passed)*self.grid.dt + self.phase) * self.sech()
 
 class GaussianImpulseWithFrequency(ParentSource):
     def __init__(self, name, Intensity, peak_timestep, pulse_duration, wavelength, tfsf=False, phase=0):
@@ -133,14 +135,14 @@ class GaussianImpulseWithFrequency(ParentSource):
 
     def step_Ez(self):
         self.grid.Ez[self.position] += self.ampl * np.exp(-2*np.log(2)*(((self.peak_timestep - self.grid.timesteps_passed)*self.grid.dt)/self.pulse_duration)**2) \
-                                       * np.sin(self.omega * self.grid.time_passed + self.phase)
+                                       * np.sin(self.omega * (self.peak_timestep - self.grid.timesteps_passed)*self.grid.dt + self.phase)
 
     def step_Hy(self):
         if not self.tfsf:
             pass
         else:
             self.grid.Hy[self.position - 1] += -np.sqrt(eps0/mu0) * self.ampl * np.exp(-2*np.log(2)*(((self.peak_timestep - self.grid.timesteps_passed)*self.grid.dt)/self.pulse_duration)**2) \
-                                       * np.sin(self.omega * self.grid.time_passed + self.phase)
+                                       * np.sin(self.omega * (self.peak_timestep - self.grid.timesteps_passed)*self.grid.dt + self.phase)
 
 class EnvelopeSinus(ParentSource):
     '''creates an enveloped oscillation (ampl * gaussian_impulse * sin(wt + phase))'''
@@ -170,14 +172,14 @@ class EnvelopeSinus(ParentSource):
 
 
     def step_Ez(self):
-        self.grid.Ez[self.position] += self.ampl * np.exp(-0.5 * (((self.peak_timestep - self.grid.timesteps_passed)/self.sigma) ** 2)) * np.sin(self.omega * self.grid.time_passed + self.phase)
+        self.grid.Ez[self.position] += self.ampl * np.exp(-0.5 * (((self.peak_timestep - self.grid.timesteps_passed)/self.sigma) ** 2)) * np.sin(self.omega * self.grid.timesteps_passed * self.grid.dt + self.phase)
 
     def step_Hy(self):
         if not self.tfsf:
             pass
         else:
             self.grid.Hy[self.position - 1] += -np.sqrt(eps0/mu0) * self.ampl * np.exp(-0.5 * ((self.peak_timestep -
-                                                  self.grid.timesteps_passed)/self.sigma) ** 2) * np.sin(self.omega * (self.grid.time_passed) + self.phase)
+                                                  self.grid.timesteps_passed)/self.sigma) ** 2) * np.sin(self.omega * (self.grid.timesteps_passed - 1) * self.grid.dt + self.phase)
 
 class ActivatedSinus(ParentSource):
     '''sin squared as activation function'''
@@ -205,10 +207,10 @@ class ActivatedSinus(ParentSource):
 
     def step_Ez(self):
         if self.carrier_omega * self.grid.time_passed < np.pi / 2:
-            self.grid.Ez[self.position] += self.ampl * (np.sin(self.carrier_omega * self.grid.time_passed))**2 * np.sin(self.omega * self.grid.time_passed  + self.phase)
+            self.grid.Ez[self.position] += self.ampl * (np.sin(self.carrier_omega * self.grid.timesteps_passed * self.grid.dt))**2 * np.sin(self.omega * self.grid.timesteps_passed * self.grid.dt + self.phase)
 
         else:
-            self.grid.Ez[self.position] += self.ampl * np.sin(self.omega * self.grid.time_passed + self.phase)
+            self.grid.Ez[self.position] += self.ampl * np.sin(self.omega * self.grid.timesteps_passed * self.grid.dt + self.phase)
 
     def step_Hy(self):
         if not self.tfsf:
@@ -216,7 +218,7 @@ class ActivatedSinus(ParentSource):
 
         else:
             if self.carrier_omega * self.grid.time_passed < np.pi / 2:
-                self.grid.Hy[self.position - 1] += -np.sqrt(eps0/mu0) * self.ampl * (np.sin(self.carrier_omega * self.grid.time_passed))**2 * np.sin(self.omega * self.grid.time_passed + self.phase)
+                self.grid.Hy[self.position - 1] += -np.sqrt(eps0/mu0) * self.ampl * (np.sin(self.carrier_omega * (self.grid.timesteps_passed - 1)*self.grid.dt))**2 * np.sin(self.omega * (self.grid.timesteps_passed - 1)*self.grid.dt + self.phase)
 
             else:
-                self.grid.Hy[self.position - 1] += -np.sqrt(eps0/mu0) * self.ampl * np.sin(self.omega * self.grid.time_passed + self.phase)
+                self.grid.Hy[self.position - 1] += -np.sqrt(eps0/mu0) * self.ampl * np.sin(self.omega * (self.grid.timesteps_passed - 1)*self.grid.dt + self.phase)

@@ -262,6 +262,7 @@ class Harmonic_Slab_Lorentz_Setup(benchmark):
         self._set_N_lambda()
         self._visualize()
 
+
 class QPM_Length(benchmark):
 
     def __init__(self, number_of_lambdas, timesteps, name, peak_timestep, pulse_duration, number_of_distributed_observer):
@@ -272,7 +273,7 @@ class QPM_Length(benchmark):
         self.timesteps = timesteps
         self.nx = self.no_of_lambdas * (2*self.half_qpm + 1) + 10           # 10 is just a buffer to place boundarys and src
         self.start_media = 5
-        self.ending_indices = np.array([self.start_media + i*737 for i in range(self.no_of_lambdas*2 + 1)])
+        self.ending_indices = np.array([self.start_media + i*self.half_qpm for i in range(self.no_of_lambdas*2 + 1)])
         self.peak_timestep = peak_timestep
         self.pulse_duration = pulse_duration
         self.no_observer = number_of_distributed_observer
@@ -307,13 +308,47 @@ class QPM_Length(benchmark):
         #qpm_grid[self.nx - 1] = f.RightSideMur()
 
         # step 6: run simulation
-        qpm_grid.run_timesteps(timesteps=self.timesteps, vis=True)
+        qpm_grid.run_timesteps(timesteps=self.timesteps, vis=False)
+
+    def _create_grid_mono(self):
+        qpm_grid_mono = f.Grid(nx=self.nx, dx=self.dx, benchmark='qpm_harmonic_length', courant=0.5)
+        self.grids.append(qpm_grid_mono)
+
+        for indices in range(len(self.ending_indices) - 1):
+            if indices % 2 == 0:
+                    qpm_grid_mono[self.ending_indices[indices]:self.ending_indices[indices + 1]] = f.LorentzMedium(
+                        name='Varin', permeability=1, eps_inf=1.0, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0],
+                        chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
+
+            else:
+                    qpm_grid_mono[self.ending_indices[indices]:self.ending_indices[indices + 1]] = f.LorentzMedium(
+                        name='Varin', permeability=1, eps_inf=1.0, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0],
+                        chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
+
+        qpm_grid_mono[3] = f.GaussianImpulseWithFrequency(name='Varin', Intensity=5*10e12, wavelength=1.064e-06, pulse_duration=self.pulse_duration, peak_timestep=self.peak_timestep, tfsf=False)
+
+        for pos in self.obs_positions:
+            qpm_grid_mono[int(pos)] = f.E_FFTObserver(name='Varin', first_timestep=0, second_timestep=self.timesteps - 1)
+
+
+        qpm_grid_mono[0] = f.LeftSideGridBoundary()
+        qpm_grid_mono[self.nx - 1] = f.RightSideGridBoundary()
+
+        #qpm_grid[0] = f.LeftSideMur()
+        #qpm_grid[self.nx - 1] = f.RightSideMur()
+
+        # step 6: run simulation
+        qpm_grid_mono.run_timesteps(timesteps=self.timesteps, vis=False)
+
 
     def _allocate_memory(self):
         self.observed_data = np.zeros(shape=(self.no_observer, self.timesteps))
+        self.observed_data_mono = np.zeros(shape=(self.no_observer, self.timesteps))
         observer_object_list = np.array(self.grids[0].local_observers)
+        observer_object_list_mono = np.array(self.grids[1].local_observers)
         for obs_ind in range(self.no_observer):
             self.observed_data[obs_ind][:] = observer_object_list[obs_ind].observed_E[:]
+            self.observed_data_mono[obs_ind][:] = observer_object_list_mono[obs_ind].observed_E[:]
         self.grid_information = np.array([self.grids[0].dt, self.grids[0].dx, self.no_of_lambdas, self.peak_timestep, self.pulse_duration])
         self.relative_observer_pos = self.obs_positions - self.start_media
 
@@ -325,16 +360,20 @@ class QPM_Length(benchmark):
         file_grid_info = os.path.join(self.dir_path, 'info.npy')
         file_relative_pos = os.path.join(self.dir_path, 'relative_ind.npy')
         file_data = os.path.join(self.dir_path, 'E_data.npy')
+        file_data_mono = os.path.join(self.dir_path, 'E_data_mono.npy')
 
         np.save(file_grid_info, arr=self.grid_information)
         np.save(file_relative_pos, arr=self.relative_observer_pos)
         np.save(file_data, arr=self.observed_data)
+        np.save(file_data_mono, arr=self.observed_data_mono)
         print("saved in --- %s seconds ---" % (time.time() - start_time))
 
     def run_benchmark(self):
         start_time = time.time()
         self._create_grid()
+        self._create_grid_mono()
         print("computed in --- %s seconds ---" % (time.time() - start_time))
+
 
 class QPM_end_P(benchmark):
     ''' reproduces paper QuasiPhaseMatching from Varin's Paper '''
@@ -440,10 +479,10 @@ class Soliton(benchmark):
         self.used_intensities = np.array(self.intensities)
 
     def _create_grids(self, intensity):
-        soliton_grid = f.Grid(270000, dx=25e-09, courant=0.5)
+        soliton_grid = f.Grid(550000, dx=25e-09, courant=0.5) #12mm 550000
 
         # Step 1: init media
-        soliton_grid[5:269990] = f.CentroRamanMedium(name='Varin', chi_1=[0.69617, 0.40794, 0.89748], w0=[2.7537e16, 1.6205e16, 1.9034e14], chi_3=[1.94e-22, 0, 0], alpha=[0.7, 0, 0], wr=[8.7722e13, 0, 0], gamma_K=[0, 0, 0], gamma_R=[3.1250e13, 0, 0], permeability=1, conductivity=0, eps_inf=1)
+        soliton_grid[5:549990] = f.CentroRamanMedium(name='Varin', chi_1=[0.69617, 0.40794, 0.89748], w0=[2.7537e16, 1.6205e16, 1.9034e14], chi_3=[1.94e-22, 0, 0], alpha=[0.7, 0, 0], wr=[8.7722e13, 0, 0], gamma_K=[0, 0, 0], gamma_R=[3.1250e13, 0, 0], permeability=1, conductivity=0, eps_inf=1)
 
         # Step 2: init src
         soliton_grid[3] = f.SechEnveloped(name='Varin', wavelength=1.5e-06, pulse_duration=self.pulse_duration, Intensity=intensity, peak_timestep=self.peak_timestep, tfsf=False)
@@ -453,10 +492,10 @@ class Soliton(benchmark):
 
         # Step 4: init boundaries
         soliton_grid[0] = f.LeftSideGridBoundary()
-        soliton_grid[269999] = f.RightSideGridBoundary()
+        soliton_grid[549999] = f.RightSideGridBoundary()
 
         # Step 5: start benchmark
-        soliton_grid.run_timesteps(700000, vis=False)
+        soliton_grid.run_timesteps(1500000, vis=False)
 
         # due to multiprocessing it is more convenient to store data by process (nobody loves waiting)
         observed_process_data = soliton_grid.local_observers[0].stored_data
@@ -483,7 +522,6 @@ class Soliton(benchmark):
         processpool = Pool()
         self.observed_data = np.array(processpool.map(self._create_grids, self.intensities))
         print("computed in --- %s seconds ---" % (time.time() - start_time))
-
 
 class TiO2_Si02_Dielectric_Mirror_Setup:
 

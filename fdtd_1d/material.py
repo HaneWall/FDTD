@@ -310,12 +310,13 @@ class CentroRamanMedium(Vacuum):
         self.E_3[:] = self.E_1[:] ** 3
 
         # chi_1 * E_1 + chi_3 * (alpha * E_3 + (1 - alpha) * Q * E)
-        first_term = np.outer(np.array(self.chi_1), self.E_1)
-        second_term = np.outer((self.chi_matrix[1] * self.alpha), self.E_3)
+        #first_term = np.outer(np.array(self.chi_1), self.E_1)
+        first_term =  np.outer(self.E_1, np.array(self.chi_1))
+        second_term = np.outer(self.E_3, (self.chi_matrix[1] * self.alpha))
         third_term_1_alpha = np.broadcast_to((1 - self.alpha) * self.chi_matrix[1], shape=(len(self.position), len(self.chi_1)))
         third_term_E = np.transpose(np.broadcast_to(self.E_1, shape=(len(self.chi_1), len(self.position))))
         third_term = third_term_1_alpha * third_term_E * self.Q_k
-        self.P_Tilde = eps0 * (np.transpose(first_term) + np.transpose(second_term) + third_term)
+        self.P_Tilde = eps0 * (first_term + second_term + third_term)
 
 
     def step_P(self):

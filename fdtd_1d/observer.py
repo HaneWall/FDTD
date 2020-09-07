@@ -142,9 +142,10 @@ class MovingFrame(ParentObserver):
 
     @cached_property
     def t_start(self):
-        delay_distance_in_dx = self.position[0] + int((self.position[-1] - self.position[0])/2) - self.grid.sources[0].position
+        self.delay_distance_in_dx = self.position[0] + int((self.position[-1] - self.position[0])/2) - self.grid.sources[0].position
+        print(self.delay_distance_in_dx)
         peak_timestep = self.grid.sources[0].peak_timestep
-        return (peak_timestep + int((delay_distance_in_dx * c0) / (self.corrected_group_velocity * self.grid.courant)))
+        return (peak_timestep + int((self.delay_distance_in_dx * c0) / (self.corrected_group_velocity * self.grid.courant)))
 
     @cached_property
     def corrected_group_velocity(self):
