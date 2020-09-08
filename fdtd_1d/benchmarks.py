@@ -464,7 +464,7 @@ class Soliton(benchmark):
 
     ''' tries to show the majestic combined effect of GVD and SPM '''
 
-    def __init__(self, name, central_wavelength, pulse_duration, intensities, x_to_snapshot, peak_timestep, frame_width_in_dx):
+    def __init__(self, name, central_wavelength, pulse_duration, intensities, x_to_snapshot, peak_timestep, frame_width_in_dx, dx):
         super().__init__(name=name, benchmark_type='soliton')
         self.central_wavelength = central_wavelength
         self.pulse_duration = pulse_duration
@@ -472,19 +472,21 @@ class Soliton(benchmark):
         self.x_to_snapshot = x_to_snapshot
         self.peak_timestep = peak_timestep
         self.name = name
+        self.dx = dx
+        self.nx = int(x_to_snapshot[-1]/self.dx) + 5000
         self.frame_width = frame_width_in_dx
 
 
     def _allocate_memory(self):
-        self.grid_information = np.array([self.peak_timestep, self.pulse_duration])
+        self.grid_information = np.array([self.peak_timestep, self.pulse_duration, self.dx, self.frame_width])
         self.used_propagations = np.array(self.x_to_snapshot)
         self.used_intensities = np.array(self.intensities)
 
     def _create_grids(self, intensity):
-        soliton_grid = f.Grid(550000, dx=25e-09, courant=0.5) #12mm 550000
+        soliton_grid = f.Grid(self.nx, dx=self.dx, courant=0.5) #12mm 550000
 
         # Step 1: init media
-        soliton_grid[5:549990] = f.CentroRamanMedium(name='Varin', chi_1=[0.69617, 0.40794, 0.89748], w0=[2.7537e16, 1.6205e16, 1.9034e14], chi_3=[1.94e-22, 0, 0], alpha=[0.7, 0, 0], wr=[8.7722e13, 0, 0], gamma_K=[0, 0, 0], gamma_R=[3.1250e13, 0, 0], permeability=1, conductivity=0, eps_inf=1)
+        soliton_grid[5:self.nx-10] = f.CentroRamanMedium(name='Varin', chi_1=[0.69617, 0.40794, 0.89748], w0=[2.7537e16, 1.6205e16, 1.9034e14], chi_3=[1.94e-22, 0, 0], alpha=[0.7, 0, 0], wr=[8.7722e13, 0, 0], gamma_K=[0, 0, 0], gamma_R=[3.1250e13, 0, 0], permeability=1, conductivity=0, eps_inf=1)
 
         # Step 2: init src
         soliton_grid[3] = f.SechEnveloped(name='Varin', wavelength=1.5e-06, pulse_duration=self.pulse_duration, Intensity=intensity, peak_timestep=self.peak_timestep, tfsf=False)
@@ -494,10 +496,13 @@ class Soliton(benchmark):
 
         # Step 4: init boundaries
         soliton_grid[0] = f.LeftSideGridBoundary()
-        soliton_grid[549999] = f.RightSideGridBoundary()
+        soliton_grid[self.nx - 1] = f.RightSideGridBoundary()
+
+        soliton_grid.local_observers[0]._allocate_memory()
+        timesteps = soliton_grid.local_observers[0].timesteps_to_store[-1] + 5000
 
         # Step 5: start benchmark
-        soliton_grid.run_timesteps(1500000, vis=False)
+        soliton_grid.run_timesteps(timesteps, vis=False)
 
         # due to multiprocessing it is more convenient to store data by process (nobody loves waiting)
         observed_process_data = soliton_grid.local_observers[0].stored_data

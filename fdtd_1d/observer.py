@@ -143,7 +143,6 @@ class MovingFrame(ParentObserver):
     @cached_property
     def t_start(self):
         self.delay_distance_in_dx = self.position[0] + int((self.position[-1] - self.position[0])/2) - self.grid.sources[0].position
-        print(self.delay_distance_in_dx)
         peak_timestep = self.grid.sources[0].peak_timestep
         return (peak_timestep + int((self.delay_distance_in_dx * c0) / (self.corrected_group_velocity * self.grid.courant)))
 
@@ -154,8 +153,8 @@ class MovingFrame(ParentObserver):
                                         dx=self.grid.dx, courant=self.grid.courant,
                                         n_real=self.grid.materials[0].n_real(self.central_omega))
 
-
     def _allocate_memory(self):
+        print('Process initiated')
         self.stored_data = np.empty(shape=(len(self.x_store), len(self.position)))
         self.position_frame = np.array(self.position)
         self.timesteps_to_store = np.array([self.t_start + int((x * c0)/(self.corrected_group_velocity * self.grid.dx * self.grid.courant)) for x in self.x_store])
@@ -165,9 +164,6 @@ class MovingFrame(ParentObserver):
         self.position_frame = np.array(self.position) + movement
 
     def save_Ez(self):
-        if self.stored_data is None:
-            self._allocate_memory()
-
         if self.grid.timesteps_passed in self.timesteps_to_store:
             self._new_position()
             self.stored_data[self.i][:] = self.grid.Ez[self.position_frame[0]:(self.position_frame[-1] + 1)]

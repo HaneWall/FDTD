@@ -30,11 +30,11 @@ import time
 
 # Or build your own setup
 
-#setup7 = f.Soliton(name='6mm', peak_timestep=16000, pulse_duration=10e-15, intensities=[10e12, 3.25e15, 10e16], central_wavelength=1.5e-6, x_to_snapshot=[0, 3e-3, 6e-3, 9e-3, 12e-3], frame_width_in_dx=2000)
-#setup7.run_benchmark()
-#setup7.store_obs_data()
+setup7 = f.Soliton(name='12mm_12nm', peak_timestep=16000, pulse_duration=10e-15, intensities=[10e12, 3.25e15, 10e16], central_wavelength=1.5e-6, x_to_snapshot=[0, 3e-3, 6e-3, 9e-3, 12e-3], frame_width_in_dx=5000, dx=12e-9)
+setup7.run_benchmark()
+setup7.store_obs_data()
 
-# Step 1: init grid
+'''# Step 1: init grid
 test = f.Grid(5000, 25e-09, courant=0.5) # creates 201 grid cells (á 4.0e-09m)
 
 # Step 2: init media
@@ -109,4 +109,4 @@ test[4999] = f.RightSideGridBoundary()
 test.run_timesteps(40000)
 #print("computed in --- %s seconds ---" % (time.time() - start_time))
 #test.run_timesteps(780)
-
+'''

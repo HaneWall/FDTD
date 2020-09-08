@@ -8,10 +8,8 @@ from .observer import QuasiHarmonicObserver, E_FFTObserver, P_FFTObserver
 from werkzeug.utils import cached_property
 import time
 from tqdm import tqdm
-#from progressbar import ProgressBar
 from numba import njit
 
-#pbar = ProgressBar()
 
 class Grid:
 

@@ -159,11 +159,10 @@ class Load_Soliton(Case):
     def _load_data(self):
         start_time = time.time()
         self.observed_data = np.load(self.path + '/Int_Pos_E.npy')
-        self.dx = 25e-09
-        self.peak_timestep, self.pulse_duration = np.load(self.path + '/info.npy')
+        self.peak_timestep, self.pulse_duration, self.dx, self.frame_width = np.load(self.path + '/info.npy')
         self.intensities = np.load(self.path + '/intensities.npy')
         self.propagation_distance = np.load(self.path + '/propagations.npy')
-        self.mu_m = self.dx*np.arange(2001) - 1000*self.dx
+        self.mu_m = self.dx*np.arange(self.frame_width) - (self.frame_width / 2) * self.dx
         print("loaded in --- %s seconds ---" % (time.time() - start_time))
 
     def _do_hilbert_transforms(self):
@@ -464,8 +463,8 @@ class Load_Lorentz_Slab(Case):
 
 
 
-#soliton_test = Load_Soliton('late_night')
-#soliton_test.plot_hilbert_transforms()
+soliton_test = Load_Soliton('late_night')
+soliton_test.plot_hilbert_transforms()
 
 
 #lorentz_test = Load_Lorentz_Slab('new_data_files_per_terminal')
@@ -481,13 +480,13 @@ qpm_test_end_P.fft()
 qpm_test_end_P.show_spectrum()
 '''
 
-qpm_test = Load_QPM_length('mono_and_not_mono')
+'''qpm_test = Load_QPM_length('mono_and_not_mono')
 qpm_test.zero_pad(37000)
 qpm_test.set_fft_limits(past_from_max=18000, future_from_max=18000)
 qpm_test.fft()
 qpm_test.visualize_windowed_data()
 #qpm_test.visualize_over_frequencies()
-qpm_test.visualize_n_over_length(number_of_harmonic=2)
+qpm_test.visualize_n_over_length(number_of_harmonic=2)'''
 
 
 
