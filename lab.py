@@ -67,9 +67,9 @@ test = f.Grid(5000, 25e-09, courant=0.5) # creates 201 grid cells (á 4.0e-09m)
 
 # Step 3: init sources
 
-#test[3] = f.SechEnveloped(name='first_try', wavelength=1.5e-06, pulse_duration=10e-15, Intensity=1e14, peak_timestep=16000, tfsf=False)
+test[3] = f.SechEnveloped(name='first_try', wavelength=1.5e-06, pulse_duration=10e-15, Intensity=1e14, peak_timestep=16000, tfsf=False)
 #test[3000] = f.GaussianImpulseWithFrequency(name='test', wavelength=1.064e-06, pulse_duration=10e-15, tfsf=False, Intensity=10e12, peak_timestep=16000)
-test[5] = f.ActivatedSinus(name='sin**2activation', wavelength=800e-09, carrier_wavelength=8000.0e-09, phase_shift=0, amplitude=1, tfsf=False)
+#test[5] = f.ActivatedSinus(name='sin**2activation', wavelength=800e-09, carrier_wavelength=8000.0e-09, phase_shift=0, amplitude=1, tfsf=False)
 #test[2000] = f.ActivatedSinus(name='sin**2activation', wavelength=500e-9, carrier_wavelength=20*1.064e-06, phase_shift=0, amplitude=1, tfsf=True)
 #test[30] = f.SinusoidalImpulse(name='test', amplitude=1, phase_shift=0, wavelength=800.0e-09, tfsf=True)
 

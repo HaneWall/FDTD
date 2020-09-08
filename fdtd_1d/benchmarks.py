@@ -55,6 +55,7 @@ class benchmark:
         self.grids = []
 
     def allocate_directory(self):
+
         self.dir_path = os.path.join(os.path.dirname(__file__), 'saved_data/'+self.benchmark_type+'/'+self.name)
         os.mkdir(path=self.dir_path)
 
