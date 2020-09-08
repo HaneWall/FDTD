@@ -64,6 +64,8 @@ class benchmark:
         for grid in self.grids:
             grid.store_obs_data(benchmark=True, benchmark_name=self.name)
 
+
+
 class Harmonic_Slab_Lorentz_Setup(benchmark):
 
 
@@ -530,6 +532,7 @@ class Soliton(benchmark):
         self.observed_data = np.array(processpool.map(self._create_grids, self.intensities))
         print("computed in --- %s seconds ---" % (time.time() - start_time))
 
+
 class TiO2_Si02_Dielectric_Mirror_Setup:
 
     def __init__(self, N_lambda_media, wavelength_guided_for, wavelength, ampl, timesteps, number_of_layer_pairs, vary_layers=False, vary_inc_wavelength=False):
@@ -641,6 +644,7 @@ class TiO2_Si02_Dielectric_Mirror_Setup:
 
         else:
             self._construct_non_vary_grid()
+
 
 class Harmonic_Slab_Setup:
 
