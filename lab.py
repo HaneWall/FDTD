@@ -11,10 +11,10 @@ import time
 #setup.run_benchmark()
 #setup_2 = f.TiO2_Si02_Dielectric_Mirror_Setup(N_lambda_media=25, wavelength_guided_for=800.e-09, wavelength=800e-09, ampl=1, timesteps=15000, number_of_layer_pairs=15, vary_layers=True, vary_inc_wavelength=False)
 #setup_2.run_benchmark()
-#setup_3 = f.Harmonic_Slab_Lorentz_Setup(name='new_numpy_step_P', dx=[4/6 * 3.91e-07], length_grid_in_dx=[50], length_media_in_dx=[30], start_index_media=5, wavelength=1.75e-05, eps_inf=1.5, chi_1=[5.1], chi_2=[0], chi_3=[0], conductivity=0, w0=[1.2566e14], gamma=[8e12], ampl=1, timesteps=[6000])
+#setup_3 = f.Harmonic_Slab_Lorentz_Setup(name='new_progressbar', dx=[4/6 * 3.91e-07], length_grid_in_dx=[50], length_media_in_dx=[30], start_index_media=5, wavelength=1.75e-05, eps_inf=1.5, chi_1=[5.1], chi_2=[0], chi_3=[0], conductivity=0, w0=[1.2566e14], gamma=[8e12], ampl=1, timesteps=[6000])
 #setup_3.run_benchmark()
 
-#setup_3 = f.Harmonic_Slab_Lorentz_Setup(name='new_order', dx=[2/6 * 3.91e-07, 4/6 * 3.91e-07, 6/6 * 3.91e-07], length_grid_in_dx=[100, 55, 40], length_media_in_dx=[90, 45, 30], start_index_media=5, wavelength=1.75e-05, eps_inf=1.05, chi_1=[2.1, 2.4], chi_2=[0, 0], chi_3=[0, 0], conductivity=0, w0=[1.2566e14, 1.2e13], gamma=[8e12, 9e14], ampl=1, timesteps=[15000, 7500, 5000], courant=1)
+#setup_3 = f.Harmonic_Slab_Lorentz_Setup(name='new_order_pregress', dx=[2/6 * 3.91e-07, 4/6 * 3.91e-07, 6/6 * 3.91e-07], length_grid_in_dx=[100, 55, 40], length_media_in_dx=[90, 45, 30], start_index_media=5, wavelength=1.75e-05, eps_inf=1.05, chi_1=[2.1, 2.4], chi_2=[0, 0], chi_3=[0, 0], conductivity=0, w0=[1.2566e14, 1.2e13], gamma=[8e12, 9e14], ampl=1, timesteps=[15000, 7500, 5000], courant=1)
 #setup_3.run_benchmark()
 #setup_3.store_obs_data()
 
@@ -23,25 +23,25 @@ import time
 #setup5.store_obs_data()
 
 
-#setup6 = f.QPM_Length(name='mono_and_not_mono', number_of_lambdas=6, timesteps=72000, peak_timestep=32000, pulse_duration=10e-15, number_of_distributed_observer=750)
+#setup6 = f.QPM_Length(name='mono_and_not_mono_progressbar', number_of_lambdas=6, timesteps=72000, peak_timestep=32000, pulse_duration=10e-15, number_of_distributed_observer=750)
 #setup6.run_benchmark()
 #setup6.store_obs_data()
 
 
 # Or build your own setup
 
-#setup7 = f.Soliton(name='big_domain_25nm', peak_timestep=16000, pulse_duration=10e-15, intensities=[10e12, 3.25e15, 10e16], central_wavelength=1.5e-6, x_to_snapshot=[0, 3e-3, 6e-3, 9e-3, 12e-3], frame_width_in_dx=2000)
+#setup7 = f.Soliton(name='6mm', peak_timestep=16000, pulse_duration=10e-15, intensities=[10e12, 3.25e15, 10e16], central_wavelength=1.5e-6, x_to_snapshot=[0, 3e-3, 6e-3, 9e-3, 12e-3], frame_width_in_dx=2000)
 #setup7.run_benchmark()
 #setup7.store_obs_data()
 
 # Step 1: init grid
-test = f.Grid(100, 25e-09, courant=1) # creates 201 grid cells (á 4.0e-09m)
+test = f.Grid(5000, 25e-09, courant=0.5) # creates 201 grid cells (á 4.0e-09m)
 
 # Step 2: init media
-test[50:80] = f.NonDispersiveMedia(name='Media4Epsleft', permeability=1, permittivity=3, conductivity=0)
-#test[5:5990] = f.LorentzMedium(name='Varin', permeability=1, eps_inf=1.0, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0], chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
+#test[50:80] = f.NonDispersiveMedia(name='Media4Epsleft', permeability=1, permittivity=3, conductivity=0)
+#test[10:4000] = f.LorentzMedium(name='Varin', permeability=1, eps_inf=1.0, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0], chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
 
-#test[5:5990] = f.CentroRamanMedium(name='test', chi_1=[0.69617, 0.40794, 0.89748], w0=[2.7537e16, 1.6205e16, 1.9034e14], chi_3=[1.94e-22, 0, 0], alpha=[0.7, 0, 0], wr=[8.7722e13, 0, 0], gamma_K=[0, 0, 0], gamma_R=[3.1250e13, 0, 0], permeability=1, conductivity=0, eps_inf=1)
+#test[6:4000] = f.CentroRamanMedium(name='test', chi_1=[0.69617, 0.40794, 0.89748], w0=[2.7537e16, 1.6205e16, 1.9034e14], chi_3=[1.94e-22, 0, 0], alpha=[0.7, 0, 0], wr=[8.7722e13, 0, 0], gamma_K=[0, 0, 0], gamma_R=[3.1250e13, 0, 0], permeability=1, conductivity=0, eps_inf=1)
 
 #test[800:2900] = f.LorentzMedium(name='Varin', permeability=1, eps_inf=1, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0], chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
 #test[30:45] = f.LorentzMedium(name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[-30.e-12, 0, 0], chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
@@ -69,7 +69,7 @@ test[50:80] = f.NonDispersiveMedia(name='Media4Epsleft', permeability=1, permitt
 
 #test[3] = f.SechEnveloped(name='first_try', wavelength=1.5e-06, pulse_duration=10e-15, Intensity=1e14, peak_timestep=16000, tfsf=False)
 #test[3000] = f.GaussianImpulseWithFrequency(name='test', wavelength=1.064e-06, pulse_duration=10e-15, tfsf=False, Intensity=10e12, peak_timestep=16000)
-test[15] = f.ActivatedSinus(name='sin**2activation', wavelength=800e-09, carrier_wavelength=8000.0e-09, phase_shift=0, amplitude=1, tfsf=True)
+test[5] = f.ActivatedSinus(name='sin**2activation', wavelength=800e-09, carrier_wavelength=8000.0e-09, phase_shift=0, amplitude=1, tfsf=False)
 #test[2000] = f.ActivatedSinus(name='sin**2activation', wavelength=500e-9, carrier_wavelength=20*1.064e-06, phase_shift=0, amplitude=1, tfsf=True)
 #test[30] = f.SinusoidalImpulse(name='test', amplitude=1, phase_shift=0, wavelength=800.0e-09, tfsf=True)
 
@@ -93,20 +93,20 @@ test[15] = f.ActivatedSinus(name='sin**2activation', wavelength=800e-09, carrier
 #test[2966] = f.P_FFTObserver(name='P_two_lambda_laterpeak_16000_737', first_timestep=0, second_timestep=99999)
 
 # Step 5: add boundaries
-test[0] = f.LeftSideMur()
-test[99] = f.RightSideMur()
+#test[0] = f.LeftSideMur()
+#test[99] = f.RightSideMur()
 
-#test[0] = f.LeftSideGridBoundary()
+test[0] = f.LeftSideGridBoundary()
 
-#test[99] = f.RightSideGridBoundary()
+test[4999] = f.RightSideGridBoundary()
 
 
 #test[3449] = f.RightSideMur()
 #test[1499] = f.RightSideMur()
     
 # Step 6: run simulation
-start_time = time.time()
-test.animate_timesteps(50000)
-print("computed in --- %s seconds ---" % (time.time() - start_time))
+#start_time = time.time()
+test.run_timesteps(40000)
+#print("computed in --- %s seconds ---" % (time.time() - start_time))
 #test.run_timesteps(780)
 

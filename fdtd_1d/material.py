@@ -1,8 +1,9 @@
 from .grid import Grid
 from werkzeug.utils import cached_property
 import numpy as np
+import time
 from .constants import eps0, c0
-
+from .type_management import ndarray
 
 
 def _create_array_from_slice(slice):
@@ -119,20 +120,20 @@ class LorentzMedium(Vacuum):
 
 
     @cached_property
-    def a(self):
+    def a(self) -> ndarray:
         a = np.zeros(len(self.w_0))
         a[:] = (self.grid.dt * self.w_0[:] ** 2) / (1 + self.gamma[:]/2 * self.grid.dt)
         return a
 
 
     @cached_property
-    def b(self):
+    def b(self) -> ndarray:
         b = np.zeros(len(self.w_0))
         b[:] = (1 - self.gamma[:]/2 * self.grid.dt) / (1 + self.gamma[:]/2 * self.grid.dt)
         return b
 
     @cached_property
-    def chi_matrix(self):
+    def chi_matrix(self) -> ndarray:
         chi_m = np.array([self.chi_1, self.chi_2, self.chi_3])
         return chi_m
 
@@ -171,17 +172,25 @@ class LorentzMedium(Vacuum):
         return (c0)/(self.n_real(omega) + omega*diff_n)
 
     def step_P_tilde(self):
+        #start_time = time.time()
         if self.J_p_k is None:
             self._allocate_E_arrays()
             self._allocate_P_tilde()
             self._allocate_J_p_k()
             self._allocate_P_k()
 
-        self.E_1[:] = self.grid.Ez[self.position[0]:(self.position[-1] + 1)]
+        '''self.E_1[:] = self.grid.Ez[self.position[0]:(self.position[-1] + 1)]
         self.E_2[:] = self.E_1[:] ** 2
         self.E_3[:] = self.E_1[:] ** 3
-        self.E_matrix = np.transpose(np.array([self.E_1, self.E_2, self.E_3]))
+        self.E_matrix = np.transpose(np.array([self.E_1, self.E_2, self.E_3]))'''
+        #start_time = time.time()
+        self.E_matrix = np.stack((self.grid.Ez[self.position[0]:(self.position[-1] + 1)], self.grid.Ez[self.position[0]:(self.position[-1] + 1)] ** 2, self.grid.Ez[self.position[0]:(self.position[-1] + 1)] ** 3), axis=1)
+
+
+        #print("computed matrix in --- %s seconds ---" % (time.time() - start_time))
+        start_time = time.time()
         self.P_tilde = eps0 * np.matmul(self.E_matrix, self.chi_matrix)
+        #print("computed mamul in --- %s seconds ---" % (time.time() - start_time))
 
     def step_P(self):
         self.P_k[0:len(self.position)] = self.P_k[0:len(self.position)] + self.grid.dt * self.J_p_k[0:len(self.position)]

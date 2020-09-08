@@ -1,17 +1,21 @@
 import numpy as np
 import pandas as pd
 
-
+from .type_management import ndarray, Number, float64, int64
 from .constants import c0, eps0, mu0
 from .visuals import visualize, AnimateTillTimestep, visualize_permittivity, visualize_fft
 from .observer import QuasiHarmonicObserver, E_FFTObserver, P_FFTObserver
 from werkzeug.utils import cached_property
+import time
+from tqdm import tqdm
+#from progressbar import ProgressBar
+from numba import njit
 
-
+#pbar = ProgressBar()
 
 class Grid:
 
-    def __init__(self, nx, dx, courant=1, benchmark=None, name=None):
+    def __init__(self, nx, dx, courant = 1, benchmark=None, name=None):
         self.mu = np.ones(nx)               # permeability - free space / vacuum
         self.eps = np.ones(nx)              # permittivity - free space / vacuum
         self.conductivity = np.zeros(nx)
@@ -27,6 +31,8 @@ class Grid:
         self.timesteps_passed = 0
         self.grid_name = name               # needed if benchmarks create multiple grids (distinguish them)
         self.benchmark_type = benchmark     # some objects have to know which kind of benchmark is processed to work properly
+
+
         self.sources = []                   # saving source.py-objects
         self.materials = []                 # saving material.py-objects
         self.boundaries = []                # saving boundary.py-objects
@@ -42,10 +48,12 @@ class Grid:
         # note that each obj owns a different declaration of _place_into_grid
         placing_obj._place_into_grid(grid=self, index=key)
 
-    def curl_Ez(self):
+
+    def curl_Ez(self) -> ndarray:
         return self.Ez[1:] - self.Ez[:-1]
 
-    def curl_Hy(self):
+
+    def curl_Hy(self) -> ndarray:
         return self.Hy[1:] - self.Hy[:-1]
 
 
@@ -53,7 +61,7 @@ class Grid:
         # simulate_t in s
         self.timesteps = int(simulate_t / self.dt)
 
-        for time_step in range(1, self.timesteps + 1):          # range output: [..)
+        for time_step in tqdm(range(1, self.timesteps + 1)):          # range output: [..)
             self.update()
             self.timesteps_passed += 1
         if vis:
@@ -63,7 +71,7 @@ class Grid:
         # discrete timesteps
         self.timesteps = timesteps
 
-        for time_step in range(1, self.timesteps + 1):
+        for time_step in tqdm(range(1, self.timesteps + 1)):
             self.update()
             self.timesteps_passed += 1
         if vis:
@@ -108,6 +116,7 @@ class Grid:
         self.Hy[0:self.nx-1] = self.Hy[0:self.nx-1] + self.dt/(mu0 * self.mu[0:self.nx-1] * self.dx) * self.curl_Ez()
 
     # main algorithm
+
     def update(self):
         # note that steps are dependent on object
         # updating polarisation P
@@ -118,18 +127,31 @@ class Grid:
             observer.save_P()
 
         for mat in self.materials:
+            #start_time = time.time()
             mat.step_P_tilde()
+            #print("computed P tilde in --- %s seconds ---" % (time.time() - start_time))
+            #start_time = time.time()
             mat.step_J_p()
+            #print("computed J_p in --- %s seconds ---" % (time.time() - start_time))
+            #start_time = time.time()
             mat.step_P()
+            #print("computed P in --- %s seconds ---" % (time.time() - start_time))
+            #start_time = time.time()
             mat.step_G()
+            #print("computed G in --- %s seconds ---" % (time.time() - start_time))
+            #start_time = time.time()
             mat.step_Q()
+            #print("computed Q in --- %s seconds ---" % (time.time() - start_time))
+
 
         # updating Hy - boundaries
         for bound in self.boundaries:
             bound.save_Hy()
 
         # updating Hy - field, index [first cell, last cell - 1]
+        #start_time = time.time()
         self.step_Hy()
+        #print("computed H in --- %s seconds ---" % (time.time() - start_time))
 
         # updating Hy - Sources
         for source in self.sources:
@@ -144,7 +166,9 @@ class Grid:
             bound.save_Ez()
 
         # updating E - field, index [1,last cell]
+        #start_time = time.time()
         self.step_Ez()
+        #print("computed E in --- %s seconds ---" % (time.time() - start_time))
 
         # updating E - Sources
         for source in self.sources:

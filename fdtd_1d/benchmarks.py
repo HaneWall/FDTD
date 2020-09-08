@@ -11,6 +11,7 @@ from multiprocessing import Pool
 
 
 
+
 color_spec = [BLUE, CYAN, TEAL, ORANGE, RED, MAGENTA, GREY]
 
 # Implementation of a dielectric slab
@@ -519,7 +520,7 @@ class Soliton(benchmark):
 
     def run_benchmark(self):
         start_time = time.time()
-        processpool = Pool()
+        processpool = Pool(3)
         self.observed_data = np.array(processpool.map(self._create_grids, self.intensities))
         print("computed in --- %s seconds ---" % (time.time() - start_time))
 
