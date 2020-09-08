@@ -2,6 +2,8 @@ from .grid import Grid
 from werkzeug.utils import cached_property
 import numpy as np
 import time
+from .backend import backend as bd
+from .backend import NumpyBackend
 from .constants import eps0, c0
 from .type_management import ndarray
 
@@ -94,8 +96,8 @@ class LorentzMedium(Vacuum):
         self.eps = eps_inf
         self.mu = permeability
         self.conductivity = conductivity
-        self.gamma = np.array(gamma)
-        self.w_0 = np.array(w0)
+        self.gamma = bd.array(gamma)
+        self.w_0 = bd.array(w0)
         self.chi_1 = chi_1
         self.chi_2 = chi_2
         self.chi_3 = chi_3
@@ -105,36 +107,37 @@ class LorentzMedium(Vacuum):
         self.start_of_media = None
 
     def _allocate_P_tilde(self):
-        self.P_tilde = np.zeros(shape=(len(self.position), len(self.chi_1)))
+        self.P_tilde = bd.zeros((len(self.position), len(self.chi_1)))
 
     def _allocate_E_arrays(self):
-        self.E_1 = np.zeros(len(self.position))
-        self.E_2 = np.zeros(len(self.position))
-        self.E_3 = np.zeros(len(self.position))
+        self.E_1 = bd.zeros(len(self.position))
+        self.E_2 = bd.zeros(len(self.position))
+        self.E_3 = bd.zeros(len(self.position))
+        self.E_matrix = bd.empty((len(self.position), 3))
 
     def _allocate_J_p_k(self):
-        self.J_p_k = np.zeros(shape=(len(self.position), len(self.chi_1)))
+        self.J_p_k = bd.zeros((len(self.position), len(self.chi_1)))
 
     def _allocate_P_k(self):
-        self.P_k = np.zeros(shape=(len(self.position), len(self.chi_1)))
+        self.P_k = bd.zeros((len(self.position), len(self.chi_1)))
 
 
     @cached_property
-    def a(self) -> ndarray:
-        a = np.zeros(len(self.w_0))
-        a[:] = (self.grid.dt * self.w_0[:] ** 2) / (1 + self.gamma[:]/2 * self.grid.dt)
+    def a(self):
+        a = bd.zeros(len(self.w_0))
+        a = (self.grid.dt * self.w_0 ** 2) / (1 + self.gamma/2 * self.grid.dt)
         return a
 
 
     @cached_property
-    def b(self) -> ndarray:
-        b = np.zeros(len(self.w_0))
-        b[:] = (1 - self.gamma[:]/2 * self.grid.dt) / (1 + self.gamma[:]/2 * self.grid.dt)
+    def b(self):
+        b = bd.zeros(len(self.w_0))
+        b = (1 - self.gamma/2 * self.grid.dt) / (1 + self.gamma/2 * self.grid.dt)
         return b
 
     @cached_property
-    def chi_matrix(self) -> ndarray:
-        chi_m = np.array([self.chi_1, self.chi_2, self.chi_3])
+    def chi_matrix(self):
+        chi_m = bd.array([self.chi_1, self.chi_2, self.chi_3])
         return chi_m
 
     '''@property
@@ -184,24 +187,33 @@ class LorentzMedium(Vacuum):
         self.E_3[:] = self.E_1[:] ** 3
         self.E_matrix = np.transpose(np.array([self.E_1, self.E_2, self.E_3]))'''
         #start_time = time.time()
-        self.E_matrix = np.stack((self.grid.Ez[self.position[0]:(self.position[-1] + 1)], self.grid.Ez[self.position[0]:(self.position[-1] + 1)] ** 2, self.grid.Ez[self.position[0]:(self.position[-1] + 1)] ** 3), axis=1)
-
-
+        self.E_1 = self.grid.Ez[self.position[0]:(self.position[-1] + 1)]
+        self.E_matrix = bd.stack((self.E_1, self.E_1 ** 2, self.E_1 ** 3), axis=1)
         #print("computed matrix in --- %s seconds ---" % (time.time() - start_time))
-        start_time = time.time()
-        self.P_tilde = eps0 * np.matmul(self.E_matrix, self.chi_matrix)
+        #start_time = time.time()
+        self.P_tilde = eps0 * bd.matmul(self.E_matrix, self.chi_matrix)
         #print("computed mamul in --- %s seconds ---" % (time.time() - start_time))
 
     def step_P(self):
-        self.P_k[0:len(self.position)] = self.P_k[0:len(self.position)] + self.grid.dt * self.J_p_k[0:len(self.position)]
-        self.grid.P[self.position[0]:(self.position[-1] + 1)] = np.sum(self.P_k, axis=1)
+        self.P_k = self.P_k + self.grid.dt * self.J_p_k
+        self.grid.P[self.position[0]:(self.position[-1] + 1)] = bd.sum(self.P_k, axis=1)
+        '''if isinstance(bd, NumpyBackend):
+            self.grid.P[self.position[0]:(self.position[-1] + 1)] = bd.sum(self.P_k, axis=1)
+        else:
+            self.grid.P[self.position[0]:(self.position[-1] + 1)] = bd.sum(self.P_k, dim=1)'''
 
 
     def step_J_p(self):
-        self.J_p_k[0:len(self.position)] = self.b * self.J_p_k[0:len(self.position)] + \
-                                           self.a * (self.P_tilde[0:len(self.position)] - self.P_k[0:len(self.position)])
+        '''self.J_p_k[0:len(self.position)][:] = self.b * self.J_p_k[0:len(self.position)] + \
+                                           self.a * (self.P_tilde[0:len(self.position)] - self.P_k[0:len(self.position)])'''
 
-        self.grid.J_p[self.position[0]:(self.position[-1] + 1)] = np.sum(self.J_p_k, axis=1)
+        self.J_p_k = self.b * self.J_p_k + self.a * (self.P_tilde - self.P_k)
+
+        self.grid.J_p[self.position[0]:(self.position[-1] + 1)] = bd.sum(self.J_p_k, axis=1)
+        '''if isinstance(bd, NumpyBackend):
+            self.grid.J_p[self.position[0]:(self.position[-1] + 1)] = bd.sum(self.J_p_k, axis=1)
+        else:
+            self.grid.J_p[self.position[0]:(self.position[-1] + 1)] = bd.sum(self.J_p_k, dim=1)'''
 
 class CentroRamanMedium(Vacuum):
 
@@ -213,10 +225,10 @@ class CentroRamanMedium(Vacuum):
         self.eps = eps_inf
         self.mu = permeability
         self.conductivity = conductivity
-        self.gamma_K = np.array(gamma_K)
-        self.gamma_R = np.array(gamma_R)
-        self.w_0 = np.array(w0)
-        self.w_R = np.array(wr)
+        self.gamma_K = bd.array(gamma_K)
+        self.gamma_R = bd.array(gamma_R)
+        self.w_0 = bd.array(w0)
+        self.w_R = bd.array(wr)
         self.chi_1 = chi_1
         self.chi_3 = chi_3
         self.J_p_k = None
@@ -227,57 +239,57 @@ class CentroRamanMedium(Vacuum):
         self.E_2 = None
         self.E_3 = None
 
-        self.alpha = np.array(alpha)
+        self.alpha = bd.array(alpha)
         self.start_of_media = None
 
     @cached_property
     def a(self):
-        a = np.zeros(len(self.w_0))
-        a[:] = (self.grid.dt * self.w_0[:] ** 2) / (1 + self.gamma_K[:]/2 * self.grid.dt)
+        a = bd.zeros(len(self.w_0))
+        a = (self.grid.dt * self.w_0 ** 2) / (1 + self.gamma_K/2 * self.grid.dt)
         return a
 
     @cached_property
     def b(self):
-        b = np.zeros(len(self.w_0))
-        b[:] = (1 - self.gamma_K[:]/2 * self.grid.dt) / (1 + self.gamma_K[:]/2 * self.grid.dt)
+        b = bd.zeros(len(self.w_0))
+        b = (1 - self.gamma_K/2 * self.grid.dt) / (1 + self.gamma_K/2 * self.grid.dt)
         return b
 
     @cached_property
     def c(self):
-        c = np.zeros(len(self.w_R))
-        c[:] = (self.w_R[:] ** 2 * self.grid.dt) / (1 + self.grid.dt * self.gamma_R[:])
+        c = bd.zeros(len(self.w_R))
+        c = (self.w_R ** 2 * self.grid.dt) / (1 + self.grid.dt * self.gamma_R)
         return c
 
     @cached_property
     def d(self):
-        d = np.zeros(len(self.w_R))
-        d[:] = (1 - self.gamma_R[:] * self.grid.dt) / (1 + self.gamma_R[:] * self.grid.dt)
+        d = bd.zeros(len(self.w_R))
+        d = (1 - self.gamma_R * self.grid.dt) / (1 + self.gamma_R * self.grid.dt)
         return d
 
     @cached_property
     def chi_matrix(self):
-        chi_m = np.array([self.chi_1, self.chi_3])
+        chi_m = bd.array([self.chi_1, self.chi_3])
         return chi_m
 
     def _allocate_J_p_k(self):
-        self.J_p_k = np.zeros(shape=(len(self.position), len(self.chi_1)))
+        self.J_p_k = bd.empty((len(self.position), len(self.chi_1)))
 
     def _allocate_P_k(self):
-        self.P_k = np.zeros(shape=(len(self.position), len(self.chi_1)))
+        self.P_k = bd.empty((len(self.position), len(self.chi_1)))
 
     def _allocate_P_tilde(self):
-        self.P_Tilde = np.zeros(shape=(len(self.position), len(self.chi_1)))
+        self.P_Tilde = bd.empty((len(self.position), len(self.chi_1)))
 
     def _allocate_G_k(self):
-        self.G_k = np.zeros(shape=(len(self.position), len(self.chi_1)))
+        self.G_k = bd.empty((len(self.position), len(self.chi_1)))
 
     def _allocate_Q_k(self):
-        self.Q_k = np.zeros(shape=(len(self.position), len(self.chi_1)))
+        self.Q_k = bd.empty((len(self.position), len(self.chi_1)))
 
     def _allocate_E_arrays(self):
-        self.E_1 = np.zeros(len(self.position))
-        self.E_2 = np.zeros(len(self.position))
-        self.E_3 = np.zeros(len(self.position))
+        self.E_1 = bd.zeros(len(self.position))
+        self.E_2 = bd.zeros(len(self.position))
+        self.E_3 = bd.zeros(len(self.position))
 
     def epsilon_real(self, omega):
         eps_real = np.real(self.epsilon_complex(omega))
@@ -314,39 +326,36 @@ class CentroRamanMedium(Vacuum):
             self._allocate_G_k()
             self._allocate_E_arrays()
 
-        self.E_1[:] = self.grid.Ez[self.position[0]:(self.position[-1] + 1)]
-        self.E_2[:] = self.E_1[:] ** 2
-        self.E_3[:] = self.E_1[:] ** 3
+        #start_time = time.time()
+        self.E_1 = self.grid.Ez[self.position[0]:(self.position[-1] + 1)]
+        self.E_2 = self.E_1 ** 2
+        self.E_3 = self.E_1 ** 3
+        #print("got E-fields in --- %s seconds ---" % (time.time() - start_time))
 
-        # chi_1 * E_1 + chi_3 * (alpha * E_3 + (1 - alpha) * Q * E)
-        #first_term = np.outer(np.array(self.chi_1), self.E_1)
-        first_term =  np.outer(self.E_1, np.array(self.chi_1))
-        second_term = np.outer(self.E_3, (self.chi_matrix[1] * self.alpha))
-        third_term_1_alpha = np.broadcast_to((1 - self.alpha) * self.chi_matrix[1], shape=(len(self.position), len(self.chi_1)))
-        third_term_E = np.transpose(np.broadcast_to(self.E_1, shape=(len(self.chi_1), len(self.position))))
-        third_term = third_term_1_alpha * third_term_E * self.Q_k
+        first_term = bd.outer(self.E_1, bd.array(self.chi_1))
+        second_term = bd.outer(self.E_3, (self.chi_matrix[1] * self.alpha))
+        third_term_1_alpha = (1 - self.alpha) * self.chi_matrix[1]
+        third_term = third_term_1_alpha * (self.Q_k * self.E_1[:, np.newaxis])
         self.P_Tilde = eps0 * (first_term + second_term + third_term)
 
-
     def step_P(self):
-        self.P_k[0:len(self.position)] = self.P_k[0:len(self.position)] + self.grid.dt * self.J_p_k[0:len(self.position)]
-        self.grid.P[self.position[0]:(self.position[-1] + 1)] = np.sum(self.P_k, axis=1)
+        self.P_k = self.P_k + self.grid.dt * self.J_p_k
+        '''if isinstance(bd, NumpyBackend):
+            self.grid.P[self.position[0]:(self.position[-1] + 1)] = np.sum(self.P_k, axis=1)
+        else:
+            self.grid.P[self.position[0]:(self.position[-1] + 1)] = bd.sum(self.P_k, dim=1)'''
 
 
     def step_J_p(self):
-        self.J_p_k[0:len(self.position)] = self.b * self.J_p_k[0:len(self.position)] + \
-                                           self.a * (self.P_Tilde[0:len(self.position)] - self.P_k[0:len(self.position)])
-
-        self.grid.J_p[self.position[0]:(self.position[-1] + 1)] = np.sum(self.J_p_k, axis=1)
+        self.J_p_k = self.b * self.J_p_k + self.a * (self.P_Tilde - self.P_k)
+        self.grid.J_p[self.position[0]:(self.position[-1] + 1)] = bd.sum(self.J_p_k, axis=1)
 
 
     def step_G(self):
-        self.G_k[0:len(self.position)] = self.d * self.G_k[0:len(self.position)] + self.c * \
-                                         (np.transpose(np.broadcast_to(self.E_2, shape=(len(self.chi_1), len(self.position)))) - self.Q_k[0:len(self.position)])
-
+        self.G_k = self.d * self.G_k + self.c * (self.E_2[:, np.newaxis] - self.Q_k)
 
     def step_Q(self):
-        self.Q_k[0:len(self.position)] = self.Q_k[0:len(self.position)] + self.grid.dt * self.G_k[0:len(self.position)]
+        self.Q_k = self.Q_k + self.grid.dt * self.G_k
 
 class CustomMedia(Vacuum):
     # UNDER CONSTRUCTION!!!

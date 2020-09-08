@@ -6,6 +6,9 @@ from fdtd_1d.constants import c0
 import time
 
 
+#choose backend
+f.backend.set_backend('numpy')
+
 # Load setup/benchmark:
 #setup = f.Harmonic_Slab_Setup(dx=4.e-09, length_grid_in_dx=40, length_media_in_dx=30, start_index_media=5, wavelength=240.e-09, epsilon=4, ampl=1, timesteps=10000)
 #setup.run_benchmark()
@@ -28,20 +31,27 @@ import time
 #setup6.store_obs_data()
 
 
-# Or build your own setup
+# Or build your own setup 35.630565881729126 , 3.25e15, 10e16
+
+#5000 torch:35.630565881729126  numpy: 26.812683820724487
+#10000 torch:69.29656410217285  numpy:60.88352298736572
+#100000 torch:369.2917821407318 numpy:334.64923787117004
+#500000 torch:
 
 setup7 = f.Soliton(name='12mm_18nm', peak_timestep=16000, pulse_duration=10e-15, intensities=[10e12, 3.25e15, 10e16], central_wavelength=1.5e-6, x_to_snapshot=[0, 3e-3, 6e-3, 9e-3, 12e-3], frame_width_in_dx=5000, dx=18e-9)
 setup7.run_benchmark()
-setup7.store_obs_data()
+#setup7.store_obs_data()
 
-'''# Step 1: init grid
-test = f.Grid(5000, 25e-09, courant=0.5) # creates 201 grid cells (á 4.0e-09m)
+
+'''
+# Step 1: init grid
+test = f.Grid(6000, 25e-09, courant=0.5) # creates 201 grid cells (á 4.0e-09m)
 
 # Step 2: init media
 #test[50:80] = f.NonDispersiveMedia(name='Media4Epsleft', permeability=1, permittivity=3, conductivity=0)
-#test[10:4000] = f.LorentzMedium(name='Varin', permeability=1, eps_inf=1.0, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0], chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
+#test[10:5990] = f.LorentzMedium(name='Varin', permeability=1, eps_inf=1.0, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0], chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
 
-#test[6:4000] = f.CentroRamanMedium(name='test', chi_1=[0.69617, 0.40794, 0.89748], w0=[2.7537e16, 1.6205e16, 1.9034e14], chi_3=[1.94e-22, 0, 0], alpha=[0.7, 0, 0], wr=[8.7722e13, 0, 0], gamma_K=[0, 0, 0], gamma_R=[3.1250e13, 0, 0], permeability=1, conductivity=0, eps_inf=1)
+test[10:5990] = f.CentroRamanMedium(name='test', chi_1=[0.69617, 0.40794, 0.89748], w0=[2.7537e16, 1.6205e16, 1.9034e14], chi_3=[1.94e-22, 0, 0], alpha=[0.7, 0, 0], wr=[8.7722e13, 0, 0], gamma_K=[0, 0, 0], gamma_R=[3.1250e13, 0, 0], permeability=1, conductivity=0, eps_inf=1)
 
 #test[800:2900] = f.LorentzMedium(name='Varin', permeability=1, eps_inf=1, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0], chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
 #test[30:45] = f.LorentzMedium(name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[-30.e-12, 0, 0], chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
@@ -98,15 +108,15 @@ test[3] = f.SechEnveloped(name='first_try', wavelength=1.5e-06, pulse_duration=1
 
 test[0] = f.LeftSideGridBoundary()
 
-test[4999] = f.RightSideGridBoundary()
+test[5999] = f.RightSideGridBoundary()
 
 
 #test[3449] = f.RightSideMur()
 #test[1499] = f.RightSideMur()
     
 # Step 6: run simulation
-#start_time = time.time()
-test.run_timesteps(40000)
-#print("computed in --- %s seconds ---" % (time.time() - start_time))
+start_time = time.time()
+test.run_timesteps(50000, vis=False)
+print("computed in --- %s seconds ---" % (time.time() - start_time))
 #test.run_timesteps(780)
 '''

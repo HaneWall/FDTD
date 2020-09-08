@@ -1,6 +1,6 @@
-import numpy as np
 import pandas as pd
 
+from .backend import backend as bd
 from .type_management import ndarray, Number, float64, int64
 from .constants import c0, eps0, mu0
 from .visuals import visualize, AnimateTillTimestep, visualize_permittivity, visualize_fft
@@ -14,15 +14,15 @@ from numba import njit
 class Grid:
 
     def __init__(self, nx, dx, courant = 1, benchmark=None, name=None):
-        self.mu = np.ones(nx)               # permeability - free space / vacuum
-        self.eps = np.ones(nx)              # permittivity - free space / vacuum
-        self.conductivity = np.zeros(nx)
+        self.mu = bd.ones(nx)               # permeability - free space / vacuum
+        self.eps = bd.ones(nx)              # permittivity - free space / vacuum
+        self.conductivity = bd.zeros(nx)
         self.nx = nx                        # nx: number of cells in x-direction
         self.dx = dx                        # dx: width of one cell in m
-        self.Ez = np.zeros(nx)
-        self.Hy = np.zeros(nx)
-        self.J_p = np.zeros(nx)
-        self.P = np.zeros(nx)
+        self.Ez = bd.zeros(nx)
+        self.Hy = bd.zeros(nx)
+        self.J_p = bd.zeros(nx)
+        self.P = bd.zeros(nx)
         self.courant = courant                  # 1 = magic time step ( Taflove - numerical error is minimal )
         self.dt = dx * courant / c0
         self.timesteps = None
@@ -47,11 +47,11 @@ class Grid:
         placing_obj._place_into_grid(grid=self, index=key)
 
 
-    def curl_Ez(self) -> ndarray:
+    def curl_Ez(self):
         return self.Ez[1:] - self.Ez[:-1]
 
 
-    def curl_Hy(self) -> ndarray:
+    def curl_Hy(self):
         return self.Hy[1:] - self.Hy[:-1]
 
 
@@ -125,7 +125,7 @@ class Grid:
             observer.save_P()
 
         for mat in self.materials:
-            #start_time = time.time()
+            start_time = time.time()
             mat.step_P_tilde()
             #print("computed P tilde in --- %s seconds ---" % (time.time() - start_time))
             #start_time = time.time()
@@ -134,7 +134,7 @@ class Grid:
             #start_time = time.time()
             mat.step_P()
             #print("computed P in --- %s seconds ---" % (time.time() - start_time))
-            #start_time = time.time()
+            #tart_time = time.time()
             mat.step_G()
             #print("computed G in --- %s seconds ---" % (time.time() - start_time))
             #start_time = time.time()
