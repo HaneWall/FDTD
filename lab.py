@@ -40,7 +40,7 @@ f.backend.set_backend('numpy')
 
 setup7 = f.Soliton(name='12mm_18nm', peak_timestep=16000, pulse_duration=10e-15, intensities=[10e12, 3.25e15, 10e16], central_wavelength=1.5e-6, x_to_snapshot=[0, 3e-3, 6e-3, 9e-3, 12e-3], frame_width_in_dx=5000, dx=18e-9)
 setup7.run_benchmark()
-#setup7.store_obs_data()
+setup7.store_obs_data()
 
 
 '''
@@ -48,11 +48,10 @@ setup7.run_benchmark()
 test = f.Grid(6000, 25e-09, courant=0.5) # creates 201 grid cells (á 4.0e-09m)
 
 # Step 2: init media
-#test[50:80] = f.NonDispersiveMedia(name='Media4Epsleft', permeability=1, permittivity=3, conductivity=0)
-#test[10:5990] = f.LorentzMedium(name='Varin', permeability=1, eps_inf=1.0, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0], chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
+#test[50:80] = f.NonDispersiveMedia(name='Media4Epsleft', permeability=1, permittivity=3, conductivity=0)test[10:5990] = f.LorentzMedium(name='Varin', permeability=1, eps_inf=1.0, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0], chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
 
-test[10:5990] = f.CentroRamanMedium(name='test', chi_1=[0.69617, 0.40794, 0.89748], w0=[2.7537e16, 1.6205e16, 1.9034e14], chi_3=[1.94e-22, 0, 0], alpha=[0.7, 0, 0], wr=[8.7722e13, 0, 0], gamma_K=[0, 0, 0], gamma_R=[3.1250e13, 0, 0], permeability=1, conductivity=0, eps_inf=1)
-
+#test[10:5990] = f.CentroRamanMedium(name='test', chi_1=[0.69617, 0.40794, 0.89748], w0=[2.7537e16, 1.6205e16, 1.9034e14], chi_3=[1.94e-22, 0, 0], alpha=[0.7, 0, 0], wr=[8.7722e13, 0, 0], gamma_K=[0, 0, 0], gamma_R=[3.1250e13, 0, 0], permeability=1, conductivity=0, eps_inf=1)
+test[10:5990] = f.CentroRamanMedium(name='test', chi_1=[0.69617], w0=[2.7537e16], chi_3=[1.94e-22], alpha=[0.7], wr=[8.7722e13], gamma_K=[0], gamma_R=[3.1250e13], permeability=1, conductivity=0, eps_inf=1)
 #test[800:2900] = f.LorentzMedium(name='Varin', permeability=1, eps_inf=1, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0], chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
 #test[30:45] = f.LorentzMedium(name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[-30.e-12, 0, 0], chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
 #test[871:1722] = f.LorentzMedium(name='Varin', permeability=1, eps_inf=1.05, chi_1=[2.42, 9.65, 1.46], chi_2=[-30.e-12, 0, 0], chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
@@ -77,9 +76,9 @@ test[10:5990] = f.CentroRamanMedium(name='test', chi_1=[0.69617, 0.40794, 0.8974
 
 # Step 3: init sources
 
-test[3] = f.SechEnveloped(name='first_try', wavelength=1.5e-06, pulse_duration=10e-15, Intensity=1e14, peak_timestep=16000, tfsf=False)
+#test[3] = f.SechEnveloped(name='first_try', wavelength=1.5e-06, pulse_duration=10e-15, Intensity=1e14, peak_timestep=16000, tfsf=False)
 #test[3000] = f.GaussianImpulseWithFrequency(name='test', wavelength=1.064e-06, pulse_duration=10e-15, tfsf=False, Intensity=10e12, peak_timestep=16000)
-#test[5] = f.ActivatedSinus(name='sin**2activation', wavelength=800e-09, carrier_wavelength=8000.0e-09, phase_shift=0, amplitude=1, tfsf=False)
+test[5] = f.ActivatedSinus(name='sin**2activation', wavelength=1500e-09, carrier_wavelength=8000.0e-09, phase_shift=0, amplitude=1, tfsf=False)
 #test[2000] = f.ActivatedSinus(name='sin**2activation', wavelength=500e-9, carrier_wavelength=20*1.064e-06, phase_shift=0, amplitude=1, tfsf=True)
 #test[30] = f.SinusoidalImpulse(name='test', amplitude=1, phase_shift=0, wavelength=800.0e-09, tfsf=True)
 
@@ -120,3 +119,4 @@ test.run_timesteps(50000, vis=False)
 print("computed in --- %s seconds ---" % (time.time() - start_time))
 #test.run_timesteps(780)
 '''
+

@@ -175,7 +175,6 @@ class LorentzMedium(Vacuum):
         return (c0)/(self.n_real(omega) + omega*diff_n)
 
     def step_P_tilde(self):
-        #start_time = time.time()
         if self.J_p_k is None:
             self._allocate_E_arrays()
             self._allocate_P_tilde()
@@ -196,6 +195,7 @@ class LorentzMedium(Vacuum):
 
     def step_P(self):
         self.P_k = self.P_k + self.grid.dt * self.J_p_k
+
         self.grid.P[self.position[0]:(self.position[-1] + 1)] = bd.sum(self.P_k, axis=1)
         '''if isinstance(bd, NumpyBackend):
             self.grid.P[self.position[0]:(self.position[-1] + 1)] = bd.sum(self.P_k, axis=1)
@@ -204,9 +204,6 @@ class LorentzMedium(Vacuum):
 
 
     def step_J_p(self):
-        '''self.J_p_k[0:len(self.position)][:] = self.b * self.J_p_k[0:len(self.position)] + \
-                                           self.a * (self.P_tilde[0:len(self.position)] - self.P_k[0:len(self.position)])'''
-
         self.J_p_k = self.b * self.J_p_k + self.a * (self.P_tilde - self.P_k)
 
         self.grid.J_p[self.position[0]:(self.position[-1] + 1)] = bd.sum(self.J_p_k, axis=1)
@@ -243,6 +240,13 @@ class CentroRamanMedium(Vacuum):
         self.start_of_media = None
 
     @cached_property
+    def material_mask(self):
+        mask = bd.zeros(self.grid.nx)
+        mask[self.position] = 1
+        return mask
+
+
+    @cached_property
     def a(self):
         a = bd.zeros(len(self.w_0))
         a = (self.grid.dt * self.w_0 ** 2) / (1 + self.gamma_K/2 * self.grid.dt)
@@ -272,19 +276,19 @@ class CentroRamanMedium(Vacuum):
         return chi_m
 
     def _allocate_J_p_k(self):
-        self.J_p_k = bd.empty((len(self.position), len(self.chi_1)))
+        self.J_p_k = bd.zeros((len(self.position), len(self.chi_1)))
 
     def _allocate_P_k(self):
-        self.P_k = bd.empty((len(self.position), len(self.chi_1)))
+        self.P_k = bd.zeros((len(self.position), len(self.chi_1)))
 
     def _allocate_P_tilde(self):
-        self.P_Tilde = bd.empty((len(self.position), len(self.chi_1)))
+        self.P_Tilde = bd.zeros((len(self.position), len(self.chi_1)))
 
     def _allocate_G_k(self):
-        self.G_k = bd.empty((len(self.position), len(self.chi_1)))
+        self.G_k = bd.zeros((len(self.position), len(self.chi_1)))
 
     def _allocate_Q_k(self):
-        self.Q_k = bd.empty((len(self.position), len(self.chi_1)))
+        self.Q_k = bd.zeros((len(self.position), len(self.chi_1)))
 
     def _allocate_E_arrays(self):
         self.E_1 = bd.zeros(len(self.position))
@@ -326,11 +330,12 @@ class CentroRamanMedium(Vacuum):
             self._allocate_G_k()
             self._allocate_E_arrays()
 
-        #start_time = time.time()
+
         self.E_1 = self.grid.Ez[self.position[0]:(self.position[-1] + 1)]
         self.E_2 = self.E_1 ** 2
         self.E_3 = self.E_1 ** 3
-        #print("got E-fields in --- %s seconds ---" % (time.time() - start_time))
+
+
 
         first_term = bd.outer(self.E_1, bd.array(self.chi_1))
         second_term = bd.outer(self.E_3, (self.chi_matrix[1] * self.alpha))
@@ -348,6 +353,7 @@ class CentroRamanMedium(Vacuum):
 
     def step_J_p(self):
         self.J_p_k = self.b * self.J_p_k + self.a * (self.P_Tilde - self.P_k)
+
         self.grid.J_p[self.position[0]:(self.position[-1] + 1)] = bd.sum(self.J_p_k, axis=1)
 
 
