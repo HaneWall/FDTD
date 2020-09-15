@@ -26,7 +26,11 @@ f.backend.set_backend('numpy')
 #setup5.store_obs_data()
 
 
-#setup6 = f.QPM_Length(name='mono_and_not_mono_progressbar', number_of_lambdas=6, timesteps=72000, peak_timestep=32000, pulse_duration=10e-15, number_of_distributed_observer=750)
+#setup6 = f.QPM_Length(name='different_chi', number_of_lambdas=6, timesteps=72000, peak_timestep=32000, pulse_duration=10e-15, number_of_distributed_observer=750)
+#setup6.run_benchmark()
+#setup6.store_obs_data()
+
+#setup6 = f.QPM_Length_multiple_chi_2(name='3_different_chi', number_of_lambdas=6, timesteps=72000, peak_timestep=32000, pulse_duration=10e-15, number_of_distributed_observer=750, chi2=[30e-12, 25e-12, 20e-12, 15e-12, 10e-12, 5e-12, 0e-12, -5e-12, -10e-12, -15e-12, -20e-12, -25e-12, -30e-12], multi=False)
 #setup6.run_benchmark()
 #setup6.store_obs_data()
 
@@ -42,6 +46,9 @@ setup7 = f.Soliton(name='12mm_18nm', peak_timestep=16000, pulse_duration=10e-15,
 setup7.run_benchmark()
 setup7.store_obs_data()
 
+'''setup7 = f.Soliton(name='12mm_18nm_tryout', peak_timestep=16000, pulse_duration=10e-15, intensities=[10e12, 3.25e15, 10e16], central_wavelength=1.5e-6, x_to_snapshot=[0, 3e-6], frame_width_in_dx=5000, dx=18e-9)
+setup7.run_benchmark()
+setup7.store_obs_data()'''
 
 '''
 # Step 1: init grid

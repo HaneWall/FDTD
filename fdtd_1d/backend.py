@@ -1,6 +1,6 @@
 import numpy as np
 
-'''try:
+try:
     import torch
     torch.set_default_dtype (torch.float64)
     torch_available = True
@@ -8,7 +8,7 @@ import numpy as np
 except ImportError:
     torch_available = False
     cuda_available = False
-'''
+
 class Backend:
     #which bd is active?
     def __repr__(self):
@@ -34,7 +34,7 @@ class NumpyBackend(Backend):
     matmul = staticmethod(np.matmul)
     outer = staticmethod(np.outer)
 
-'''if torch_available:
+if torch_available:
     class TorchBackend(Backend):
         int = torch.int64
         float = torch.float64
@@ -67,7 +67,7 @@ class NumpyBackend(Backend):
                 return np.asarray(arr)
 
 
-#default:'''
+#default:
 backend = NumpyBackend()
 
 def set_backend(name: str):

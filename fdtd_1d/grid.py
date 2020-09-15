@@ -125,21 +125,21 @@ class Grid:
             observer.save_P()
 
         for mat in self.materials:
-            start_time = time.time()
+            #start_time = time.time()
             mat.step_P_tilde()
-            print("computed P tilde in --- %s seconds ---" % (time.time() - start_time))
-            start_time = time.time()
+            #print("computed P tilde in --- %s seconds ---" % (time.time() - start_time))
+            #start_time = time.time()
             mat.step_J_p()
-            print("computed J_p in --- %s seconds ---" % (time.time() - start_time))
-            start_time = time.time()
+            #print("computed J_p in --- %s seconds ---" % (time.time() - start_time))
+            #start_time = time.time()
             mat.step_P()
-            print("computed P in --- %s seconds ---" % (time.time() - start_time))
-            tart_time = time.time()
+            #print("computed P in --- %s seconds ---" % (time.time() - start_time))
+            #start_time = time.time()
             mat.step_G()
-            print("computed G in --- %s seconds ---" % (time.time() - start_time))
-            start_time = time.time()
+            #print("computed G in --- %s seconds ---" % (time.time() - start_time))
+            #start_time = time.time()
             mat.step_Q()
-            print("computed Q in --- %s seconds ---" % (time.time() - start_time))
+            #print("computed Q in --- %s seconds ---" % (time.time() - start_time))
 
 
         # updating Hy - boundaries

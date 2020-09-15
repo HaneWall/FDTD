@@ -162,7 +162,7 @@ class Load_Soliton(Case):
         self.peak_timestep, self.pulse_duration, self.dx, self.frame_width = np.load(self.path + '/info.npy')
         self.intensities = np.load(self.path + '/intensities.npy')
         self.propagation_distance = np.load(self.path + '/propagations.npy')
-        self.mu_m = self.dx*np.arange(self.frame_width) - (self.frame_width / 2) * self.dx
+        self.mu_m = self.dx*np.arange(self.frame_width + 1) - (self.frame_width / 2) * self.dx
         print("loaded in --- %s seconds ---" % (time.time() - start_time))
 
     def _do_hilbert_transforms(self):
@@ -198,6 +198,165 @@ class Load_Soliton(Case):
 
                     plt.figlegend(loc='upper center', ncol=y, fancybox=False, shadow=False, edgecolor='black', title='Distanz in m')
             plt.show()
+
+class Load_QPM_length_multipe(Case):
+
+    def __init__(self, dir_name, zero_padding=0):
+        super().__init__()
+        self.path += '/qpm_harmonic_length_multiple/' + dir_name
+        self.zero_padding = zero_padding
+        self._load_data()
+        self.windowed_data = None
+        self.padded_observed_data = None
+        self.first_har = 1.77e15
+        self.second_har = 2 * self.first_har
+
+    def _load_data(self):
+        start_time = time.time()
+        self.observed_data = np.load(self.path + '/E_data.npy')
+        self.dim_chi_2, self.no_observer, self.timesteps = np.shape(self.observed_data)
+        self.grid_information = np.load(self.path + '/info.npy')
+        self.relative_observer_pos = np.load(self.path + '/relative_ind.npy')
+        self.dt, self.dx, self.no_lambdas, self.peak_ts, self.pulse_duration = self.grid_information
+        self.used_chi2 = np.load(self.path + '/chi2.npy')
+        print("loaded in --- %s seconds ---" % (time.time() - start_time))
+
+    def zero_pad(self, number_of_zeros):
+        self.padded_observed_data = np.zeros(shape=(self.dim_chi_2, self.no_observer, len(self.observed_data[0][0]) + 2*number_of_zeros))
+        for chi in range(self.dim_chi_2):
+            self.padded_observed_data[chi] = np.pad(self.observed_data[chi][0:self.no_observer][:], [(0, 0), (number_of_zeros, number_of_zeros)], constant_values=0)
+
+    def set_fft_limits(self, past_from_max, future_from_max):
+        self.windowed_data = np.zeros(shape=(self.dim_chi_2, self.no_observer, (past_from_max + future_from_max + 1)))
+
+        if self.padded_observed_data is not None:
+            dim, x, y = np.shape(self.padded_observed_data)
+            self.analytical_signal = np.empty(shape=(dim, self.no_observer, y), dtype='complex_')
+            self.envelope_amplitude = np.zeros(shape=(dim, self.no_observer, y))
+            for i in range(dim):
+                for obs in range(self.no_observer):
+                    self.analytical_signal[i][obs] = hilbert(self.padded_observed_data[i][obs][:])
+                    self.envelope_amplitude[i][obs] = np.abs(self.analytical_signal[i][obs][:])
+
+        else:
+            dim, x, y = np.shape(self.observed_data)
+            self.analytical_signal = np.empty(shape=(dim, self.no_observer, y), dtype='complex_')
+            self.envelope_amplitude = np.zeros(shape=(dim, self.no_observer, y))
+            for i in range(dim):
+                for obs in range(self.no_observer):
+                    self.analytical_signal[i][obs] = hilbert(self.observed_data[i][obs][:])
+                    self.envelope_amplitude[i][obs] = np.abs(self.analytical_signal[i][obs][:])
+
+
+        self.max_timestep = np.zeros(shape=(self.dim_chi_2, self.no_observer))
+        begin = np.zeros(shape=(self.dim_chi_2, self.no_observer))
+        end = np.zeros(shape=(self.dim_chi_2, self.no_observer))
+        for i in range(self.dim_chi_2):
+            self.max_timestep[i] = np.argmax(self.envelope_amplitude[i][0:self.no_observer][:], axis=1)
+            begin[i] = self.max_timestep[i] - past_from_max
+            end[i] = self.max_timestep[i] + future_from_max + 1
+
+        if self.padded_observed_data is not None:
+            for i in range(self.dim_chi_2):
+                for obs in range(self.no_observer):
+                    begin_ind = int(begin[i][obs])
+                    print(begin_ind)
+                    end_ind = int(end[i][obs])
+                    self.windowed_data[i][obs][:] = self.padded_observed_data[i][obs][begin_ind:end_ind]
+
+
+        else:
+            for i in range(self.dim_chi_2):
+                for obs in range(self.no_observer):
+                    begin_ind = int(begin[i][obs])
+                    end_ind = int(end[i][obs])
+                    self.windowed_data[i][obs][:] = self.observed_data[i][obs][begin_ind:end_ind]
+
+    def fft(self):
+
+        if self.windowed_data is not None:
+            dim, x, y = np.shape(self.windowed_data)
+            self.timesteps_wind = y
+            self.omega = 2 * np.pi * np.linspace(0, 1 / (2 * self.dt), self.timesteps_wind // 2)
+            self.fft_matrix = np.zeros(dim)
+            self.abs_fft_sqrd = np.zeros(dim)
+            self.normalized_abs_fft_sqrd = np.zeros(dim)
+            for i in range(dim):
+                self.fft_matrix[i] = 2 / self.timesteps_wind * np.fft.fft(self.windowed_data[i][0:self.no_observer][:])
+                self.abs_fft = np.zeros(shape=(dim, self.no_observer, self.timesteps_wind//2))
+                for obs in range(self.no_observer):
+                    self.abs_fft[i][obs][:] = np.abs(self.fft_matrix[i][obs][0:self.timesteps_wind//2])
+                self.abs_fft_sqrd[i] = self.abs_fft[i][:][:] ** 2
+                abs_fft_sqrd_max = np.max(self.abs_fft_sqrd[i][:][:])
+                self.normalized_abs_fft_sqrd[i] = self.abs_fft_sqrd / abs_fft_sqrd_max
+
+        elif self.padded_observed_data is not None:
+            timesteps = self.timesteps + self.zero_padding
+            dim, x, y = np.shape(self.padded_observed_data)
+            self.omega = 2 * np.pi * np.linspace(0, 1 / (2 * self.dt), timesteps // 2)
+            self.fft_matrix = np.zeros(dim)
+            self.abs_fft_sqrd = np.zeros(dim)
+            self.normalized_abs_fft_sqrd = np.zeros(dim)
+            for i in range(dim):
+                self.fft_matrix[i] = 2 / timesteps * np.fft.fft(self.padded_observed_data[i][0:self.no_observer][:])
+                self.abs_fft = np.zeros(shape=(dim, self.no_observer, timesteps // 2))
+                for obs in range(self.no_observer):
+                    self.abs_fft[i][obs][:] = np.abs(self.fft_matrix[i][obs][0:timesteps // 2])
+                self.abs_fft_sqrd[i] = self.abs_fft[i][:][:] ** 2
+                abs_fft_sqrd_max = np.max(self.abs_fft_sqrd[i][:][:])
+                self.normalized_abs_fft_sqrd[i] = self.abs_fft_sqrd / abs_fft_sqrd_max
+
+        else:
+            timesteps = self.timesteps
+            dim, x, y = np.shape(self.observed_data)
+            self.omega = 2 * np.pi * np.linspace(0, 1 / (2 * self.dt), timesteps // 2)
+            self.fft_matrix = np.zeros(dim)
+            self.abs_fft_sqrd = np.zeros(dim)
+            self.normalized_abs_fft_sqrd = np.zeros(dim)
+            for i in range(dim):
+                self.fft_matrix[i] = 2 / timesteps * np.fft.fft(self.observed_data[i][0:self.no_observer][:])
+                self.abs_fft = np.zeros(shape=(dim, self.no_observer, timesteps // 2))
+                for obs in range(self.no_observer):
+                    self.abs_fft[i][obs][:] = np.abs(self.fft_matrix[i][obs][0:timesteps // 2])
+                self.abs_fft_sqrd[i] = self.abs_fft[i][:][:] ** 2
+                abs_fft_sqrd_max = np.max(self.abs_fft_sqrd[i][:][:])
+                self.normalized_abs_fft_sqrd[i] = self.abs_fft_sqrd / abs_fft_sqrd_max
+
+    def visualize_n_over_length(self, number_of_harmonic):
+        intensity = 5*10e12
+        E_0 = np.sqrt(2*np.sqrt(mu0/eps0)*intensity)
+        index_of_second = np.argmin(np.abs(self.omega-number_of_harmonic*self.first_har))
+        index_of_main = np.argmin(np.abs(self.omega-self.first_har))
+        first_amplitude = np.zeros(self.dim_chi_2)
+        normalized_shg_amplitude = np.zeros(self.dim_chi_2)
+
+        for dim in range(self.dim_chi_2):
+            first_amplitude[dim] = self.abs_fft[dim][0][index_of_main]
+
+        shg_amplitude = np.zeros(shape=(self.dim_chi_2, self.no_observer))
+        for i in range(self.dim_chi_2):
+            for obs in range(self.no_observer):
+                shg_amplitude[i][obs] = self.abs_fft[i][obs][index_of_second]
+                normalized_shg_amplitude[i][:] = shg_amplitude[i][:] / (1.38 * first_amplitude[i])
+
+        '''#analytical = Qpm_Length_Analytical(initial_values=[E_0, 0])
+        analytical = Qpm_Length_Analytical(initial_values=[E_0, 0])
+        A_1, A_2, z = analytical.integrate(end_z=2.55e-5, dz=0.0001e-6)
+
+        analytical_mono = Qpm_Length_Analytical(initial_values=[E_0, 0], mode='mono')
+        A_1_mono, A_2_mono, z_mono = analytical_mono.integrate(end_z=2.55e-5, dz=0.0001e-6)'''
+
+        fig, axes = plt.subplots()
+        y = self.relative_observer_pos * self.dx
+        x = self.used_chi2
+        X, Y = np.meshgrid(x, y)
+        axes.plot_surface(X, Y, normalized_shg_amplitude)
+        axes.set_xlim([0, 2.55e-05])
+        axes.set_ylabel('Propagationsdistanz in m')
+        axes.set_xlabel('Normalisierte zweite Harmonische')
+        #plt.figlegend(loc='upper center', ncol=2, fancybox=False, shadow=False, edgecolor='black')
+        #plt.ticklabel_format(style='sci', axis='x', scilimits=(0, 0))
+        plt.show()
 
 
 class Load_QPM_length(Case):
@@ -463,13 +622,19 @@ class Load_Lorentz_Slab(Case):
 
 
 
-soliton_test = Load_Soliton('late_night')
+soliton_test = Load_Soliton('12mm_18nm_tryout')
 soliton_test.plot_hilbert_transforms()
 
 
 #lorentz_test = Load_Lorentz_Slab('new_data_files_per_terminal')
 #lorentz_test.visualize()
 # 51750 sec
+
+'''qpm_multiple = Load_QPM_length_multipe('3_different_chi')
+qpm_multiple.zero_pad(37000)
+qpm_multiple.set_fft_limits(past_from_max=18000, future_from_max=18000)
+qpm_multiple.fft()
+qpm_multiple.visualize_n_over_length(number_of_harmonic=2)'''
 
 '''
 qpm_test_end_P = Load_QPM_end_P('P_end_new')
@@ -480,11 +645,11 @@ qpm_test_end_P.fft()
 qpm_test_end_P.show_spectrum()
 '''
 
-'''qpm_test = Load_QPM_length('mono_and_not_mono')
+'''qpm_test = Load_QPM_length('different_chi')
 qpm_test.zero_pad(37000)
 qpm_test.set_fft_limits(past_from_max=18000, future_from_max=18000)
 qpm_test.fft()
-qpm_test.visualize_windowed_data()
+#qpm_test.visualize_windowed_data()
 #qpm_test.visualize_over_frequencies()
 qpm_test.visualize_n_over_length(number_of_harmonic=2)'''
 

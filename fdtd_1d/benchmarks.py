@@ -268,6 +268,90 @@ class Harmonic_Slab_Lorentz_Setup(benchmark):
         self._visualize()
 
 
+class QPM_Length_multiple_chi_2(benchmark):
+    def __init__(self, number_of_lambdas, timesteps, name, peak_timestep, pulse_duration, number_of_distributed_observer, chi2, multi=True):
+        super().__init__(name=name, benchmark_type='qpm_harmonic_length_multiple')
+        self.no_of_lambdas = number_of_lambdas
+        self.half_qpm = 737
+        self.chi_2 = chi2
+        self.multi = multi
+        self.dx = 4e-09
+        self.dt = 0.5*self.dx/c0
+        self.timesteps = timesteps
+        self.nx = self.no_of_lambdas * (2*self.half_qpm + 1) + 10           # 10 is just a buffer to place boundarys and src
+        self.start_media = 5
+        self.ending_indices = np.array([self.start_media + i*self.half_qpm for i in range(self.no_of_lambdas*2 + 1)])
+        self.peak_timestep = peak_timestep
+        self.pulse_duration = pulse_duration
+        self.no_observer = number_of_distributed_observer
+        self.obs_distance = (self.nx - 10)//self.no_observer
+        self.obs_positions = np.array([5 + i*self.obs_distance for i in range(self.no_observer)])
+
+    def _allocate_memory(self):
+        self.grid_information = np.array([self.dt, self.dx, self.no_of_lambdas, self.peak_timestep, self.pulse_duration])
+        self.relative_observer_pos = self.obs_positions - self.start_media
+
+    def store_obs_data(self):
+        start_time = time.time()
+        self.allocate_directory()
+        self._allocate_memory()
+
+        file_grid_info = os.path.join(self.dir_path, 'info.npy')
+        file_relative_pos = os.path.join(self.dir_path, 'relative_ind.npy')
+        file_data = os.path.join(self.dir_path, 'E_data.npy')
+        file_chi_info = os.path.join(self.dir_path, 'chi2.npy')
+
+        np.save(file_grid_info, arr=self.grid_information)
+        np.save(file_relative_pos, arr=self.relative_observer_pos)
+        np.save(file_data, arr=self.observed_data)
+        np.save(file_chi_info, arr=self.chi_2)
+        print("saved in --- %s seconds ---" % (time.time() - start_time))
+
+    def _create_grids(self, chi2):
+        print('process initiated')
+        qpm_grid = f.Grid(nx=self.nx, dx=self.dx, benchmark='qpm_harmonic_length_multiple', courant=0.5)
+
+        for indices in range(len(self.ending_indices) - 1):
+            if indices % 2 == 0:
+                    qpm_grid[self.ending_indices[indices]:self.ending_indices[indices + 1]] = f.LorentzMedium(
+                        name='Varin', permeability=1, eps_inf=1.0, chi_1=[2.42, 9.65, 1.46], chi_2=[30.e-12, 0, 0],
+                        chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
+
+            else:
+                    qpm_grid[self.ending_indices[indices]:self.ending_indices[indices + 1]] = f.LorentzMedium(
+                        name='Varin', permeability=1, eps_inf=1.0, chi_1=[2.42, 9.65, 1.46], chi_2=[chi2, 0, 0],
+                        chi_3=[0, 0, 0], conductivity=0, w0=[1.5494e16, 9.776e13, 7.9514e15], gamma=[0, 0, 0])
+
+        qpm_grid[3] = f.GaussianImpulseWithFrequency(name='Varin', Intensity=5*10e12, wavelength=1.064e-06, pulse_duration=self.pulse_duration, peak_timestep=self.peak_timestep, tfsf=False)
+
+        for pos in self.obs_positions:
+            qpm_grid[int(pos)] = f.E_FFTObserver(name='Varin', first_timestep=0, second_timestep=self.timesteps - 1)
+
+
+        qpm_grid[0] = f.LeftSideGridBoundary()
+        qpm_grid[self.nx - 1] = f.RightSideGridBoundary()
+
+        # step 6: run simulation
+        qpm_grid.run_timesteps(timesteps=self.timesteps, vis=False)
+
+        observed_grid_data = bd.zeros(shape=(self.no_observer, self.timesteps))
+        for obs in range(self.no_observer):
+            observed_grid_data[obs] = qpm_grid.local_observers[obs].observed_E
+
+        return observed_grid_data
+
+    def run_benchmark(self):
+        start_time = time.time()
+        processpool = Pool()
+        self.observed_data = bd.zeros(shape=(len(self.chi_2), self.no_observer, self.timesteps))
+        if self.multi:
+            self.observed_data = bd.stack(processpool.map(self._create_grids, self.chi_2))
+        else:
+            for ind_chi, chi in zip(range(len(self.chi_2)), self.chi_2):
+                self.observed_data[ind_chi] = self._create_grids(self.chi_2[ind_chi])
+        print("computed in --- %s seconds ---" % (time.time() - start_time))
+
+
 class QPM_Length(benchmark):
 
     def __init__(self, number_of_lambdas, timesteps, name, peak_timestep, pulse_duration, number_of_distributed_observer):
@@ -476,7 +560,7 @@ class Soliton(benchmark):
         self.peak_timestep = peak_timestep
         self.name = name
         self.dx = dx
-        self.nx = int(x_to_snapshot[-1]/self.dx) + 5000
+        self.nx = int(x_to_snapshot[-1]/self.dx) + 5020
         self.frame_width = frame_width_in_dx
 
 
@@ -529,7 +613,7 @@ class Soliton(benchmark):
 
     def run_benchmark(self):
         start_time = time.time()
-        processpool = Pool(3)
+        processpool = Pool()
         self.observed_data = np.array(processpool.map(self._create_grids, self.intensities))
         print("computed in --- %s seconds ---" % (time.time() - start_time))
 
