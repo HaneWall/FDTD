@@ -42,11 +42,11 @@ f.backend.set_backend('numpy')
 #100000 torch:369.2917821407318 numpy:334.64923787117004
 #500000 torch:
 
-setup7 = f.Soliton(name='12mm_18nm', peak_timestep=16000, pulse_duration=10e-15, intensities=[10e12, 3.25e15, 10e16], central_wavelength=1.5e-6, x_to_snapshot=[0, 3e-3, 6e-3, 9e-3, 12e-3], frame_width_in_dx=5000, dx=18e-9)
+setup7 = f.Soliton(name='12mm_18nm', peak_timestep=16000, pulse_duration=10e-15, intensities=[10e12, 3.25e15, 10e16], central_wavelength=1.5e-6, x_to_snapshot=[0, 3e-3, 6e-3, 9e-3, 12e-3], frame_width_in_dx=5000, dx=18e-9, multi=False)
 setup7.run_benchmark()
 setup7.store_obs_data()
 
-'''setup7 = f.Soliton(name='12mm_18nm_tryout', peak_timestep=16000, pulse_duration=10e-15, intensities=[10e12, 3.25e15, 10e16], central_wavelength=1.5e-6, x_to_snapshot=[0, 3e-6], frame_width_in_dx=5000, dx=18e-9)
+'''setup7 = f.Soliton(name='12mm_18nm_tryout', peak_timestep=16000, pulse_duration=10e-15, intensities=[10e12, 3.25e15, 10e16], central_wavelength=1.5e-6, x_to_snapshot=[0, 3e-6], frame_width_in_dx=5000, dx=18e-9, multi=False)
 setup7.run_benchmark()
 setup7.store_obs_data()'''
 

@@ -8,7 +8,7 @@ from .observer import QuasiHarmonicObserver, E_FFTObserver, P_FFTObserver
 from werkzeug.utils import cached_property
 import time
 from tqdm import tqdm
-from numba import njit
+#from numba import njit
 
 
 class Grid:

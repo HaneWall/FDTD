@@ -262,9 +262,11 @@ class Harmonic_Slab_Lorentz_Setup(benchmark):
         np.save(file_exp_phase, arr=self.get_exp_phasedifference)
 
     def run_benchmark(self):
+        start_time = time.time()
         self._grid_wo_slab()
         self._grids_w_slab()
         self._set_N_lambda()
+        print("computed in --- %s seconds ---" % (time.time() - start_time))
         self._visualize()
 
 
@@ -551,7 +553,7 @@ class Soliton(benchmark):
 
     ''' tries to show the majestic combined effect of GVD and SPM '''
 
-    def __init__(self, name, central_wavelength, pulse_duration, intensities, x_to_snapshot, peak_timestep, frame_width_in_dx, dx):
+    def __init__(self, name, central_wavelength, pulse_duration, intensities, x_to_snapshot, peak_timestep, frame_width_in_dx, dx, multi=True):
         super().__init__(name=name, benchmark_type='soliton')
         self.central_wavelength = central_wavelength
         self.pulse_duration = pulse_duration
@@ -562,6 +564,7 @@ class Soliton(benchmark):
         self.dx = dx
         self.nx = int(x_to_snapshot[-1]/self.dx) + 5020
         self.frame_width = frame_width_in_dx
+        self.multi = multi
 
 
     def _allocate_memory(self):
@@ -613,8 +616,13 @@ class Soliton(benchmark):
 
     def run_benchmark(self):
         start_time = time.time()
-        processpool = Pool()
-        self.observed_data = np.array(processpool.map(self._create_grids, self.intensities))
+        if self.multi:
+            processpool = Pool()
+            self.observed_data = np.array(processpool.map(self._create_grids, self.intensities))
+        else:
+            self.observed_data = np.zeros(shape=(np.size(self.intensities), len(self.x_to_snapshot), self.frame_width + 1))
+            for intensity_index, intensity in zip(range(np.size(self.intensities)), self.intensities):
+                self.observed_data[intensity_index] = self._create_grids(intensity)
         print("computed in --- %s seconds ---" % (time.time() - start_time))
 
 
@@ -829,7 +837,7 @@ class Harmonic_Slab_Setup:
         self._visualize()
 
 
-    
 
-    
+
+
 
